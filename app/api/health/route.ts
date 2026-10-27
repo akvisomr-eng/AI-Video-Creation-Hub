@@ -10,6 +10,7 @@ export async function GET() {
     app: "ok",
     database: "not_configured",
     auth: authConfigured ? "configured" : "not_configured",
+    geminiTextProvider: process.env.GEMINI_API_KEY ? "configured" : "not_configured",
     imageProvider: process.env.IMAGE_PROVIDER_API_KEY ? "configured" : "not_configured",
     videoProvider: process.env.VIDEO_PROVIDER_API_KEY ? "configured" : "not_configured",
     ttsProvider: process.env.TTS_PROVIDER_API_KEY ? "configured" : "not_configured",
