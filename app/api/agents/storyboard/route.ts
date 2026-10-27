@@ -156,7 +156,7 @@ export async function POST(request: Request) {
     if (sql && agentRunId) {
       try { await sql`UPDATE agent_runs SET status = 'failed', error_message = ${message.slice(0, 500)}, completed_at = now() WHERE id = ${agentRunId}::uuid`; } catch {}
     }
-    const status = message.includes("not configured") ? 503 : message.includes("only") && message.includes("seconds remaining") ? 422 : 502;
+    const status = message.includes("not configured") ? 503 : (message.includes("seconds remaining") || message.includes("duration limit") || message.includes("target duration")) ? 422 : 502;
     return NextResponse.json({ error: status === 503 ? message : message.slice(0, 300) }, { status });
   }
 }
