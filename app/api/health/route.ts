@@ -5,10 +5,11 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
+  const authConfigured = Boolean(process.env.NEON_AUTH_BASE_URL) && (process.env.NEON_AUTH_COOKIE_SECRET?.length ?? 0) >= 32;
   const checks: Record<string, string> = {
     app: "ok",
     database: "not_configured",
-    auth: process.env.NEON_AUTH_BASE_URL && process.env.NEON_AUTH_COOKIE_SECRET?.length! >= 32 ? "configured" : "not_configured",
+    auth: authConfigured ? "configured" : "not_configured",
     imageProvider: process.env.IMAGE_PROVIDER_API_KEY ? "configured" : "not_configured",
     videoProvider: process.env.VIDEO_PROVIDER_API_KEY ? "configured" : "not_configured",
     ttsProvider: process.env.TTS_PROVIDER_API_KEY ? "configured" : "not_configured",
