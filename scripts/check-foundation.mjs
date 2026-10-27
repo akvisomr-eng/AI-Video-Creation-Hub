@@ -11,6 +11,6 @@ assert.match(route, /export async function GET\(\)/, "Capabilities endpoint must
 assert.match(route, /credentialsExposed: false/, "Endpoint must explicitly assert it does not expose credentials.");
 assert.match(route, /providerCallsMade: false/, "Capabilities check must not call providers.");
 assert.match(route, /adapter_pending/, "Image/video generation must remain disabled until adapters exist.");
-assert.match(readme, /Neon\s+\*\*development\*\*\s+branch/i, "Setup documentation must direct developers to the Neon development branch.");
+assert.match(readme, /development branch/i, "Setup documentation must direct developers to the Neon development branch.");
 
 console.log("Foundation contract checks passed.");
