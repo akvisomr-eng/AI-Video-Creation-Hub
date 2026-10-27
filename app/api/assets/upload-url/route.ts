@@ -35,7 +35,7 @@ export async function POST(request: Request) {
     }
 
     const quota = await sql`SELECT COALESCE(sum(file_size_bytes), 0)::bigint AS used_bytes, count(*) FILTER (WHERE created_at >= date_trunc('day', now()))::int AS uploads_today FROM media_assets WHERE user_id = ${appUserId}`;
-    if (Number(quota[0]?.uploads_today ?? 0) >= MAX_UPLOAD_URLS_PER_DAY) {
+    if (Number(quota[0]?.uploads_today ?? 0) >= MAX_ASSETS_PER_DAY) {
       return NextResponse.json({ error: "Daily media registration limit reached (20 assets per day). Try again tomorrow." }, { status: 429 });
     }
     if (Number(quota[0]?.used_bytes ?? 0) + fileSize > MAX_USER_STORAGE_BYTES) {
