@@ -4,8 +4,8 @@ import "./globals.css";
 import { AuthProvider } from "@/components/auth-provider";
 
 export const metadata: Metadata = {
-  title: "AI Video Creation Hub — Create without limits",
-  description: "Plan, create, and edit short-form videos with an AI-powered creative workspace.",
+  title: "AI Video Creator — Ideas into motion",
+  description: "Plan, storyboard, and prepare short-form AI videos in a creator workspace.",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
