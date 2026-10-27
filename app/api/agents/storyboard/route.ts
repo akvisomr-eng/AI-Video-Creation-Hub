@@ -115,12 +115,16 @@ export async function POST(request: Request) {
     try {
       generated = await generateCreativeJson(prompt);
     } catch (providerError) {
-      const providerMessage = providerError instanceof Error ? providerError.message : "All configured AI providers failed.";
+      // Provider exceptions can contain upstream response bodies, request identifiers, or configuration details.
+      // Keep diagnostics out of the client response and persist only a stable, non-sensitive summary.
       const providerStatus = providerError && typeof providerError === "object" && "status" in providerError ? Number((providerError as { status: unknown }).status) : 502;
-      const safeReason = providerMessage.slice(0, 900);
-      await sql`UPDATE generation_jobs SET status = 'failed', error_code = ${providerStatus === 503 ? "no_provider" : "provider_chain_failed"}, error_message = ${safeReason}, completed_at = now(), updated_at = now() WHERE id = ${jobId}::uuid`;
+      const isUnavailable = providerStatus === 503;
+      const safeReason = isUnavailable
+        ? "No AI provider is currently available. Check server configuration and try again."
+        : "AI storyboard generation failed because all configured providers were unavailable or returned an error.";
+      await sql`UPDATE generation_jobs SET status = 'failed', error_code = ${isUnavailable ? "no_provider" : "provider_chain_failed"}, error_message = ${safeReason}, completed_at = now(), updated_at = now() WHERE id = ${jobId}::uuid`;
       await sql`UPDATE agent_runs SET status = 'failed', error_message = ${safeReason}, completed_at = now() WHERE id = ${agentRunId}::uuid`;
-      return NextResponse.json({ error: safeReason, jobId }, { status: providerStatus === 503 ? 503 : 502 });
+      return NextResponse.json({ error: safeReason, jobId }, { status: isUnavailable ? 503 : 502 });
     }
     const modelText = generated.text;
     await sql`UPDATE generation_jobs SET provider = ${generated.provider}, model = ${generated.model}, updated_at = now() WHERE id = ${jobId}::uuid`;
@@ -181,14 +185,21 @@ export async function POST(request: Request) {
     await sql`UPDATE agent_runs SET status = 'succeeded', output_summary = ${JSON.stringify({ sceneCount: createdScenes.length, totalSeconds: total })}::jsonb, completed_at = now() WHERE id = ${agentRunId}::uuid`;
     return NextResponse.json({ jobId, scenes: createdScenes, totalSeconds: existingTotal + total, model: generated.model, provider: generated.provider, creativeOptions, selectedPlatform: director.selectedPlatform }, { status: 201 });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "AI storyboard generation failed.";
+    const internalMessage = error instanceof Error ? error.message : "AI storyboard generation failed.";
+    const isConfigurationError = internalMessage.includes("not configured");
+    const isDurationError = internalMessage.includes("seconds remaining") || internalMessage.includes("duration limit") || internalMessage.includes("target duration") || internalMessage.includes("already meets or exceeds");
+    const status = isConfigurationError ? 503 : isDurationError ? 422 : 502;
+    const publicMessage = isConfigurationError
+      ? "AI storyboard generation is not configured. Check the server-side provider and database settings."
+      : isDurationError
+        ? "The storyboard timing limit was reached. Shorten the draft or remove existing scenes, then try again."
+        : "AI storyboard generation failed. Please try again; no provider or database internals are exposed.";
     if (sql && jobId) {
-      try { await sql`UPDATE generation_jobs SET status = 'failed', error_code = 'storyboard_generation_failed', error_message = ${message.slice(0, 500)}, completed_at = now(), updated_at = now() WHERE id = ${jobId}::uuid`; } catch {}
+      try { await sql`UPDATE generation_jobs SET status = 'failed', error_code = ${isConfigurationError ? "configuration_error" : isDurationError ? "duration_limit" : "storyboard_generation_failed"}, error_message = ${publicMessage}, completed_at = now(), updated_at = now() WHERE id = ${jobId}::uuid`; } catch {}
     }
     if (sql && agentRunId) {
-      try { await sql`UPDATE agent_runs SET status = 'failed', error_message = ${message.slice(0, 500)}, completed_at = now() WHERE id = ${agentRunId}::uuid`; } catch {}
+      try { await sql`UPDATE agent_runs SET status = 'failed', error_message = ${publicMessage}, completed_at = now() WHERE id = ${agentRunId}::uuid`; } catch {}
     }
-    const status = message.includes("not configured") ? 503 : (message.includes("seconds remaining") || message.includes("duration limit") || message.includes("target duration")) ? 422 : 502;
-    return NextResponse.json({ error: status === 503 ? message : message.slice(0, 300) }, { status });
+    return NextResponse.json({ error: publicMessage, ...(jobId ? { jobId } : {}) }, { status });
   }
 }
