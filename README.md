@@ -27,6 +27,10 @@ A responsive creator workspace for planning, storyboarding, and eventually gener
 - Production branch: `br-purple-fire-b3mbm4jo`.
 - Development branch: `br-icy-wave-b33vb56m` (isolated from production; use this branch for app development and auth testing).
 
+## Deployment
+
+See [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) for isolated Vercel Preview setup, environment variables, Neon Auth trusted-origin configuration, and acceptance checks. Do not configure Production until Preview acceptance passes.
+
 ## Local setup
 
 1. Install Node.js 22 or newer.
