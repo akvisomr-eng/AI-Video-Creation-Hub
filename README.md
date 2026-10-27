@@ -1,4 +1,4 @@
-# AI Video Creation Hub
+# AI Video Creator
 
 A responsive creator workspace for planning, storyboarding, and eventually generating/editing short-form AI videos.
 
@@ -22,7 +22,7 @@ A responsive creator workspace for planning, storyboarding, and eventually gener
 ## Infrastructure
 
 - Source repository: GitHub.
-- PostgreSQL: Neon project `AI Video Creation Hub`, database `neondb`.
+- PostgreSQL: Neon project `AI Video Creator`, database `neondb`.
 - Reproducible baseline schema: [`database/schema.sql`](database/schema.sql), syntax-checked against the development branch.
 - Production branch: `br-purple-fire-b3mbm4jo`.
 - Development branch: `br-icy-wave-b33vb56m` (isolated from production; use this branch for app development and auth testing).
