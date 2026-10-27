@@ -68,6 +68,11 @@ export async function POST(request: Request) {
     const owned = await sql`SELECT id FROM creative_projects WHERE id = ${projectId}::uuid AND user_id = ${appUserId}`;
     if (!owned.length) return NextResponse.json({ error: "Project not found." }, { status: 404 });
 
+    const dailyCount = await sql`SELECT count(*)::int AS count FROM generation_jobs WHERE user_id = ${appUserId} AND job_type = 'campaign' AND parameters->>'purpose' = 'ai_storyboard' AND created_at >= date_trunc('day', now())`;
+    if (Number(dailyCount[0]?.count ?? 0) >= 10) {
+      return NextResponse.json({ error: "Free workspace limit reached: up to 10 AI storyboard drafts per day. Try again tomorrow." }, { status: 429 });
+    }
+
     const model = process.env.GEMINI_TEXT_MODEL || "gemini-3.8-flash";
     const params = { purpose: "ai_storyboard", targetDuration, language: languageCode, visualStyle };
     const jobRows = await sql`
