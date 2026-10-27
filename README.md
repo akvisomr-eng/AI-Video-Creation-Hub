@@ -8,7 +8,9 @@ A responsive creator workspace for planning, storyboarding, and eventually gener
 - Neon Managed Auth provisioned on both the `development` and `production` Neon branches.
 - Authenticated project list and project creation API.
 - Per-project storyboard editor with prompt and narration fields.
-- Optional Gemini Creative Director endpoint that drafts and persists storyboard scenes when `GEMINI_API_KEY` is configured.
+- Multi-provider Creative Director gateway for Gemini, Groq, Cerebras, and OpenRouter, with configurable fallback order and persisted provider/model attribution.
+- Optional independent storyboard quality-review agent via `AI_MULTI_AGENT_ENABLED=true`; disabled by default to conserve free-tier quota, and gracefully falls back to the original draft if review fails.
+- Authenticated provider capability/status endpoint at `/api/ai/providers` (configuration status only; does not expose secrets or claim live provider health).
 - Private Neon Object Storage buckets provisioned on both production and development branches.
 - Authenticated presigned media uploads, verified asset registration, and private download links (requires branch-scoped storage credentials and bucket CORS setup).
 - Basic abuse controls: 10 AI storyboard drafts per user per day, 20 registered media assets per day, 50 MB per file, and 250 MB registered media per account.
@@ -44,7 +46,7 @@ A responsive creator workspace for planning, storyboarding, and eventually gener
 
 ## AI provider status
 
-Text-based AI storyboard drafting is implemented through the Gemini Developer API when `GEMINI_API_KEY` is configured. Google AI Studio has a free tier for selected models, but quotas, model availability, and whether usage is billable depend on the account and can change; review [official pricing](https://ai.google.dev/gemini-api/docs/pricing) before enabling it. No provider call is made when the key is absent.
+Text-based AI storyboard drafting uses a provider gateway. Optional adapters currently support Gemini Developer API, Groq, Cerebras, and OpenRouter; set one or more keys and configure `AI_TEXT_PROVIDER_ORDER` to control fallback order. Set `AI_MULTI_AGENT_ENABLED=true` to run an additional independent quality-review pass; it is off by default because it consumes another request and free-tier quota. Provider fallback is used when a request fails, including quota/rate-limit failures. Review the official limits/pricing and data policies before enabling each provider: [Gemini pricing](https://ai.google.dev/gemini-api/docs/pricing), [Gemini rate limits](https://ai.google.dev/gemini-api/docs/rate-limits), [Groq rate limits](https://console.groq.com/docs/rate-limits), [Cerebras pricing](https://inference-docs.cerebras.ai/support/pricing), and [OpenRouter pricing](https://openrouter.ai/pricing). All free tiers have limits and are not guaranteed to remain free. No provider call is made when no supported key is configured.
 
 Image/video generation and voiceover are **not yet operational**. Provider credentials alone are not sufficient: each provider needs an adapter, job lifecycle handling, output storage, usage/cost accounting, and end-to-end tests. The Gemini storyboard endpoint currently caps usage at 10 drafts per account per day. The app must not invent successful outputs when a provider is unavailable.
 
