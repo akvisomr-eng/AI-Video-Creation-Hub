@@ -18,7 +18,6 @@ export const TARGET_PLATFORMS = [
   "flux",
   "midjourney",
   "stable-diffusion",
-  "suno",
 ] as const;
 export type TargetPlatform = (typeof TARGET_PLATFORMS)[number];
 
@@ -54,7 +53,6 @@ const PLATFORM_GUIDANCE: Record<TargetPlatform, string> = {
   flux: "Use natural-language photography descriptions with subject, environment, lighting, composition, material detail, and color; avoid unsupported flag syntax.",
   midjourney: "Describe subject, composition, lighting, palette, material and style clearly; platform parameters should be added only by a future provider adapter.",
   "stable-diffusion": "Describe subject, setting, composition, lighting and style explicitly; keep negative constraints separate from the positive prompt.",
-  suno: "Structure music direction around genre, mood, tempo, instrumentation, energy progression, vocal style and lyric language.",
 };
 
 export function normalizeCreativeOptions(input: {
@@ -73,7 +71,7 @@ export function normalizeCreativeOptions(input: {
 
 export function recommendPlatform(brief: string, preset: CreativePreset): TargetPlatform {
   const text = brief.toLowerCase();
-  if (preset === "music-video" || /music video|mv|video klip|lagu|soundtrack|musik/.test(text)) return "suno";
+  if (preset === "music-video" || /music video|mv|video klip|lagu|soundtrack|musik/.test(text)) return "kling";
   if (preset === "anime" || /anime|animasi|kartun/.test(text)) return "kling";
   if (preset === "product-hero" || /produk|product|packaging|kemasan|iklan produk/.test(text)) return "flux";
   if (/dialogue|dialog|percakapan|berbicara|sound effects|efek suara/.test(text)) return "google-veo";
