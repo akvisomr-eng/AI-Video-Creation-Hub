@@ -8,6 +8,8 @@ A responsive creator workspace for planning, storyboarding, and eventually gener
 - Neon Managed Auth integration (enabled on the Neon `development` branch).
 - Authenticated project list and project creation API.
 - Per-project storyboard editor with prompt and narration fields.
+- Private Neon Object Storage buckets provisioned on both production and development branches.
+- Authenticated presigned media uploads, verified asset registration, and private download links (requires branch-scoped storage credentials and bucket CORS setup).
 - Server-side ownership checks for projects and scenes.
 - Storyboard total duration is validated server-side and cannot exceed 30 seconds.
 - Health endpoint at `/api/health` reports database/auth/provider configuration without exposing secrets.
@@ -27,14 +29,15 @@ A responsive creator workspace for planning, storyboarding, and eventually gener
 3. Set `DATABASE_URL` to the pooled connection string for the Neon **development** branch.
 4. Set `NEON_AUTH_BASE_URL` to the Auth base URL shown for that same development branch in Neon.
 5. Generate `NEON_AUTH_COOKIE_SECRET` with a secure random value of at least 32 characters. Never commit `.env.local`.
-6. Install and run:
+6. Set the S3-compatible `AWS_*` variables for the same Neon branch in `.env.local` if testing media upload. Set `NEON_STORAGE_BUCKET=creator-media`. Run `npm run storage:cors` once per branch/environment to configure the bucket's browser upload CORS policy.
+7. Install and run:
 
    ```bash
    npm install
    npm run dev
    ```
 
-7. Open `http://localhost:3000`, create an account, create a project, and add storyboard scenes.
+8. Open `http://localhost:3000`, create an account, create a project, add storyboard scenes, and upload media.
 
 ## AI provider status
 
@@ -46,7 +49,7 @@ Before enabling a provider, document its free-tier limits, pricing, rate limits,
 
 - AI image/video generation and retouching.
 - Text-to-speech, subtitle generation, video rendering/export.
-- Media object storage and upload flow.
+- Browser upload still needs live verification against the branch's CORS and S3 credentials.
 - Background job worker and provider retry/cancellation.
 - Native Android/iOS applications.
 - Production deployment and production auth configuration.
