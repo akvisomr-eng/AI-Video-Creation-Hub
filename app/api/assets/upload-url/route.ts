@@ -5,7 +5,7 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { requireSession } from "@/lib/auth/server";
 import { getDb } from "@/lib/db";
 import { getOrCreateAppUser } from "@/lib/user";
-import { classifyAsset, getStorageClient, MAX_UPLOAD_BYTES, MEDIA_BUCKET, sanitizeFileName } from "@/lib/storage";
+import { classifyAsset, getStorageClient, MAX_UPLOAD_BYTES, MAX_USER_STORAGE_BYTES, MAX_UPLOAD_URLS_PER_DAY, MEDIA_BUCKET, sanitizeFileName } from "@/lib/storage";
 
 export const runtime = "nodejs";
 
@@ -32,6 +32,14 @@ export async function POST(request: Request) {
     if (projectId) {
       const owned = await sql`SELECT id FROM creative_projects WHERE id = ${projectId}::uuid AND user_id = ${appUserId}`;
       if (!owned.length) return NextResponse.json({ error: "Project not found." }, { status: 404 });
+    }
+
+    const quota = await sql`SELECT COALESCE(sum(file_size_bytes), 0)::bigint AS used_bytes, count(*) FILTER (WHERE created_at >= date_trunc('day', now()))::int AS uploads_today FROM media_assets WHERE user_id = ${appUserId}`;
+    if (Number(quota[0]?.uploads_today ?? 0) >= MAX_UPLOAD_URLS_PER_DAY) {
+      return NextResponse.json({ error: "Upload limit reached for today. Try again tomorrow." }, { status: 429 });
+    }
+    if (Number(quota[0]?.used_bytes ?? 0) + fileSize > MAX_USER_STORAGE_BYTES) {
+      return NextResponse.json({ error: "Free workspace media quota is 250 MB per account. Remove older assets or use a larger plan when available." }, { status: 413 });
     }
 
     const storageKey = `users/${appUserId}/${randomUUID()}-${sanitizeFileName(fileName)}`;
