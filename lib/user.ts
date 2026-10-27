@@ -1,4 +1,3 @@
-import type { NeonQueryFunction } from "@neondatabase/serverless";
 import { getDb } from "@/lib/db";
 
 type AuthUser = { id: string; email?: string | null; name?: string | null };
