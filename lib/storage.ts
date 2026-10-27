@@ -1,6 +1,8 @@
 import { S3Client } from "@aws-sdk/client-s3";
 
 export const MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
+export const MAX_USER_STORAGE_BYTES = 250 * 1024 * 1024;
+export const MAX_UPLOAD_URLS_PER_DAY = 20;
 export const MEDIA_BUCKET = process.env.NEON_STORAGE_BUCKET || "creator-media";
 
 export function getStorageClient() {
