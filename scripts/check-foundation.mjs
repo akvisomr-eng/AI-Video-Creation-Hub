@@ -15,6 +15,7 @@ assert.match(route, /adapter_pending/, "Image/video generation must remain disab
 assert.match(storyboardRoute, /internalReason/, "Provider diagnostics must be retained only for server-side troubleshooting.");
 assert.match(storyboardRoute, /internal provider and server details are not exposed to the browser/, "Unexpected storyboard failures must return a redacted public error.");
 assert.doesNotMatch(storyboardRoute, /NextResponse\.json\(\{ error: safeReason/, "Raw provider errors must not be returned to the browser.");
+assert.doesNotMatch(storyboardRoute, /\.join\("\\\\n"\)/, "Reviewer prompt lines must use actual newline separators.");
 assert.match(readme, /development branch/i, "Setup documentation must direct developers to the Neon development branch.");
 
 console.log("Foundation contract checks passed.");
