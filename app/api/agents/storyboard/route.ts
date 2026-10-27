@@ -45,7 +45,8 @@ export async function POST(request: Request) {
   try {
     const user = await requireSession();
     if (!user) return NextResponse.json({ error: "Sign in is required." }, { status: 401 });
-    if (!process.env.GEMINI_API_KEY) {
+    const geminiApiKey = process.env.GEMINI_API_KEY;
+    if (!geminiApiKey) {
       return NextResponse.json({ error: "AI storyboard generation is not configured. Add GEMINI_API_KEY on the server to enable it; no job was created and no provider was called." }, { status: 503 });
     }
     if (!sql) return NextResponse.json({ error: "DATABASE_URL is not configured." }, { status: 503 });
@@ -105,7 +106,7 @@ export async function POST(request: Request) {
       "Create 2 to 6 scenes. Each scene duration must be positive, each visual_prompt must be concrete and usable as an image/video generation prompt, and the sum of all duration_seconds must be at most the remaining storyboard duration.",
       "Keep narration concise and in the requested language. If narration is not suitable, use an empty string. Do not include markdown fences or extra fields.",
     ].join("\n");
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(process.env.GEMINI_API_KEY)}`, {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(geminiApiKey)}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
