@@ -21,5 +21,7 @@ jobs:
           node-version: 22
       - name: Install dependencies
         run: npm install --no-audit --no-fund
+      - name: Check foundation contracts
+        run: npm run check:foundation
       - name: Build application
         run: npm run build
