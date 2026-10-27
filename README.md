@@ -5,7 +5,7 @@ A responsive creator workspace for planning, storyboarding, and eventually gener
 ## Current implementation
 
 - Next.js App Router + TypeScript workspace UI.
-- Neon Managed Auth integration (enabled on the Neon `development` branch).
+- Neon Managed Auth provisioned on both the `development` and `production` Neon branches.
 - Authenticated project list and project creation API.
 - Per-project storyboard editor with prompt and narration fields.
 - Optional Gemini Creative Director endpoint that drafts and persists storyboard scenes when `GEMINI_API_KEY` is configured.
@@ -57,11 +57,11 @@ Before enabling a provider, document its free-tier limits, pricing, rate limits,
 - Browser upload still needs live verification against the branch's CORS and S3 credentials.
 - Background job worker and provider retry/cancellation.
 - Native Android/iOS applications.
-- Production deployment and production auth configuration.
+- Production deployment and live auth verification.
 
 ## Security
 
-- API routes require an authenticated Neon Auth session before project or storyboard access.
+- Project, storyboard, and asset APIs require an authenticated Neon Auth session; the health endpoint is intentionally public and exposes no secrets.
 - Project and scene ownership is checked server-side.
 - Keep API keys, database connection strings, and cookie secrets out of Git.
 - Neon Auth has been provisioned on both production and development branches. Trusted-domain configuration, live sign-up/sign-in tests, and deployment environment setup still need verification.
