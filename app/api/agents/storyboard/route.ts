@@ -153,7 +153,7 @@ export async function POST(request: Request) {
           `Draft JSON: ${JSON.stringify(plan)}`,
           "Return only JSON with shape {project_title:string, scenes:[{title:string, visual_prompt:string, narration:string, duration_seconds:number}]}",
           "Keep the exact same scene count and exact duration_seconds values as the draft. Do not include markdown fences.",
-        ].join("\\n");
+        ].join("\n");
         const reviewed = await generateCreativeJson(reviewPrompt);
         const reviewedPlan = parsePlan(reviewed.text);
         const sameDurations = reviewedPlan.scenes.length === plan.scenes.length
