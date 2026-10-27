@@ -121,7 +121,40 @@ export async function POST(request: Request) {
     const modelText = generated.text;
     await sql`UPDATE generation_jobs SET provider = ${generated.provider}, model = ${generated.model}, updated_at = now() WHERE id = ${jobId}::uuid`;
     await sql`UPDATE agent_runs SET provider = ${generated.provider}, model = ${generated.model} WHERE id = ${agentRunId}::uuid`;
-    const plan = parsePlan(modelText);
+    let plan = parsePlan(modelText);
+    // Optional second agent pass improves continuity and catches invalid prompts without making extra provider calls by default.
+    if (process.env.AI_MULTI_AGENT_ENABLED === "true") {
+      const reviewRows = await sql`
+        INSERT INTO agent_runs (job_id, agent_name, status, input_summary, provider, model, started_at)
+        VALUES (${jobId}::uuid, 'quality_safety', 'running', ${JSON.stringify({ purpose: "storyboard_review", sceneCount: plan.scenes.length })}::jsonb, 'multi-provider', ${generated.model}, now())
+        RETURNING id
+      `;
+      const reviewRunId = String(reviewRows[0].id);
+      try {
+        const reviewPrompt = [
+          "Act as an independent storyboard editor and quality reviewer.",
+          "Review the draft for scene continuity, practical visual prompts, narration language consistency, and timing.",
+          "Correct only clear issues. Preserve the core idea and every scene's total duration; do not add scenes.",
+          `Original brief: ${brief}`,
+          `Required language: ${language}`,
+          `Visual style: ${visualStyle}`,
+          `Draft JSON: ${JSON.stringify(plan)}`,
+          "Return only JSON with shape {project_title:string, scenes:[{title:string, visual_prompt:string, narration:string, duration_seconds:number}]}",
+          "Keep the exact same scene count and exact duration_seconds values as the draft. Do not include markdown fences.",
+        ].join("\\n");
+        const reviewed = await generateCreativeJson(reviewPrompt);
+        const reviewedPlan = parsePlan(reviewed.text);
+        const sameDurations = reviewedPlan.scenes.length === plan.scenes.length
+          && reviewedPlan.scenes.every((scene, index) => Math.abs(scene.duration_seconds - plan.scenes[index].duration_seconds) < 0.001);
+        if (!sameDurations) throw new Error("Reviewer changed scene count or timing; original draft retained.");
+        plan = reviewedPlan;
+        await sql`UPDATE agent_runs SET status = 'succeeded', provider = ${reviewed.provider}, model = ${reviewed.model}, output_summary = ${JSON.stringify({ sceneCount: plan.scenes.length, reviewed: true })}::jsonb, completed_at = now() WHERE id = ${reviewRunId}::uuid`;
+      } catch (reviewError) {
+        const reviewMessage = reviewError instanceof Error ? reviewError.message : "Storyboard review failed.";
+        await sql`UPDATE agent_runs SET status = 'failed', error_message = ${reviewMessage.slice(0, 400)}, completed_at = now() WHERE id = ${reviewRunId}::uuid`;
+        // The original valid draft remains usable if the optional reviewer is unavailable.
+      }
+    }
     const total = plan.scenes.reduce((sum, scene) => sum + scene.duration_seconds, 0);
     if (total > remainingDuration + 0.001 || total > 30) throw new Error("Generated storyboard exceeds the remaining duration limit. Retry with a simpler brief.");
 
