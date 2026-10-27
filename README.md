@@ -11,7 +11,7 @@ A responsive creator workspace for planning, storyboarding, and eventually gener
 - Optional Gemini Creative Director endpoint that drafts and persists storyboard scenes when `GEMINI_API_KEY` is configured.
 - Private Neon Object Storage buckets provisioned on both production and development branches.
 - Authenticated presigned media uploads, verified asset registration, and private download links (requires branch-scoped storage credentials and bucket CORS setup).
-- Basic abuse controls: 10 AI storyboard drafts per user per day, 20 upload URLs per day, 50 MB per file, and 250 MB registered media per account.
+- Basic abuse controls: 10 AI storyboard drafts per user per day, 20 registered media assets per day, 50 MB per file, and 250 MB registered media per account.
 - Server-side ownership checks for projects and scenes.
 - Storyboard total duration is validated server-side and cannot exceed 30 seconds.
 - Health endpoint at `/api/health` reports database/auth/provider configuration without exposing secrets.
