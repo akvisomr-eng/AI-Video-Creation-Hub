@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
+    "check:foundation": "node scripts/check-foundation.mjs",
     "storage:cors": "node scripts/configure-storage-cors.mjs"
   },
   "dependencies": {

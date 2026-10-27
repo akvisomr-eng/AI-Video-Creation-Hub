@@ -64,7 +64,7 @@ export default function WorkspaceClient() {
 
   return <main className="shell">
     <aside className="sidebar">
-      <a className="brand" href="#home"><span className="brand-mark">✳</span><span>AI Video <b>Hub</b></span></a>
+      <a className="brand" href="#home"><span className="brand-mark">✳</span><span>AI Video <b>Creator</b></span></a>
       <div className="side-label">WORKSPACE</div>
       <a className="nav-item active" href="#home"><span>⌂</span> Overview</a>
       <a className="nav-item" href="#projects"><span>▧</span> My projects <small>{projects.length}</small></a>
@@ -85,7 +85,7 @@ export default function WorkspaceClient() {
       <section className="project-section" id="projects"><div className="section-heading"><div><div className="eyebrow">YOUR CANVAS</div><h2>Recent projects</h2></div><span className="muted">{projects.length} projects</span></div>
       {loading ? <div className="empty-state"><div className="empty-icon">◌</div><h3>Loading your workspace…</h3><p>Checking your session and saved project drafts.</p></div> : projects.length ? <div className="project-grid">{projects.map((project) => <a className="project-link" href={`/projects/${encodeURIComponent(project.id)}`} key={project.id}><article className="project-card"><div className="project-art"><span>{project.project_type === "image" ? "▧" : project.project_type === "edit" ? "◖" : "✦"}</span><small>{project.project_type.toUpperCase()}</small></div><h3>{project.title}</h3><p>{project.description || "A new creative project, ready for your storyboard."}</p><div className="project-meta"><span>{project.scene_count ?? 0} scenes</span><span>{project.asset_count ?? 0} assets</span><span>{project.status}</span></div></article></a>)}</div> : <div className="empty-state"><div className="empty-icon">▧</div><h3>{user ? "Your next idea belongs here." : "Sign in to save your ideas."}</h3><p>{user ? "Create a project to organize prompts, storyboards, assets, and generation jobs in one place." : "Your projects are private to your account. Sign in or create an account to begin."}</p><button onClick={() => user ? setCreating(true) : window.location.assign("/auth/sign-in")} className="secondary-button">{user ? "Create your first project" : "Sign in to get started"} <span>↗</span></button></div>}</section>
       <section className="project-section" id="usage"><div className="section-heading"><div><div className="eyebrow">TRANSPARENT BY DESIGN</div><h2>Generation status</h2></div><span className="muted">Provider setup required</span></div><div className="status-panel"><div className="status-icon">✳</div><div><h3>Creative planning is ready to build on.</h3><p>Image, video, and voice generation will stay unavailable until provider credentials are configured and end-to-end tests pass. This protects you from fake results and unexpected costs.</p><a href="/api/health" target="_blank" rel="noreferrer">View service health ↗</a></div></div></section>
-      <footer><span>AI VIDEO CREATION HUB</span><span>Ideas into motion · <a href="#settings">Settings</a></span></footer>
+      <footer><span>AI VIDEO CREATOR</span><span>Ideas into motion · <a href="#settings">Settings</a></span></footer>
     </section>
   </main>;
 }
