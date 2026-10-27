@@ -3,6 +3,7 @@ import { requireSession } from "@/lib/auth/server";
 import { getDb } from "@/lib/db";
 import { getOrCreateAppUser } from "@/lib/user";
 import { generateCreativeJson, getConfiguredTextProviders } from "@/lib/ai/text-gateway";
+import { buildDirectorInstructions, normalizeCreativeOptions } from "@/lib/ai/media-director";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -61,6 +62,8 @@ export async function POST(request: Request) {
     const language = LANGUAGES[languageCode];
     const visualStyle = typeof input.visualStyle === "string" ? input.visualStyle.trim().slice(0, 120) : "cinematic, intentional camera movement, natural lighting";
     const targetDuration = Number(input.targetDuration ?? 30);
+    const creativeOptions = normalizeCreativeOptions(input);
+    const director = buildDirectorInstructions({ brief, visualStyle, ...creativeOptions });
     if (!UUID.test(projectId)) return NextResponse.json({ error: "A valid project ID is required." }, { status: 400 });
     if (!brief) return NextResponse.json({ error: "Describe the video idea first." }, { status: 400 });
     if (!language) return NextResponse.json({ error: "Unsupported narration language." }, { status: 400 });
@@ -83,7 +86,7 @@ export async function POST(request: Request) {
     }
 
     const model = configuredProviders[0].model;
-    const params = { purpose: "ai_storyboard", targetDuration, language: languageCode, visualStyle, providerFallbacks: configuredProviders.map((provider) => provider.id) };
+    const params = { purpose: "ai_storyboard", targetDuration, language: languageCode, visualStyle, ...creativeOptions, selectedPlatform: director.selectedPlatform, providerFallbacks: configuredProviders.map((provider) => provider.id) };
     const jobRows = await sql`
       INSERT INTO generation_jobs (user_id, project_id, job_type, provider, model, status, progress, prompt, parameters, started_at)
       VALUES (${appUserId}, ${projectId}::uuid, 'campaign', 'multi-provider', ${model}, 'processing', 5, ${brief}, ${JSON.stringify(params)}::jsonb, now())
@@ -92,17 +95,18 @@ export async function POST(request: Request) {
     jobId = String(jobRows[0].id);
     const agentRows = await sql`
       INSERT INTO agent_runs (job_id, agent_name, status, input_summary, provider, model, started_at)
-      VALUES (${jobId}::uuid, 'creative_director', 'running', ${JSON.stringify({ brief, targetDuration, language, visualStyle })}::jsonb, 'multi-provider', ${model}, now())
+      VALUES (${jobId}::uuid, 'creative_director', 'running', ${JSON.stringify({ brief, targetDuration, language, visualStyle, ...creativeOptions, selectedPlatform: director.selectedPlatform })}::jsonb, 'multi-provider', ${model}, now())
       RETURNING id
     `;
     agentRunId = String(agentRows[0].id);
 
     const prompt = [
-      "Create a concise, production-ready storyboard for a short social video.",
+      "You are the Creative Director for an AI media production workspace. Create a concise, production-ready storyboard for a short video.",
       `Video idea: ${brief}`,
       `Remaining storyboard duration available for new scenes: ${remainingDuration} seconds.`,
       `Narration language: ${language}.`,
-      `Visual direction: ${visualStyle}.`,
+      director.instructions,
+      `Auto-selected target platform guidance: ${director.selectedPlatform}. This is prompt guidance only; do not claim a generation provider was called.`,
       "Return JSON only with shape: {project_title:string, scenes:[{title:string, visual_prompt:string, narration:string, duration_seconds:number}]}",
       "Create 2 to 6 scenes. Each scene duration must be positive, each visual_prompt must be concrete and usable as an image/video generation prompt, and the sum of all duration_seconds must be at most the remaining storyboard duration.",
       "Keep narration concise and in the requested language. If narration is not suitable, use an empty string. Do not include markdown fences or extra fields.",
@@ -138,6 +142,7 @@ export async function POST(request: Request) {
           `Original brief: ${brief}`,
           `Required language: ${language}`,
           `Visual style: ${visualStyle}`,
+          director.instructions,
           `Draft JSON: ${JSON.stringify(plan)}`,
           "Return only JSON with shape {project_title:string, scenes:[{title:string, visual_prompt:string, narration:string, duration_seconds:number}]}",
           "Keep the exact same scene count and exact duration_seconds values as the draft. Do not include markdown fences.",
@@ -166,7 +171,7 @@ export async function POST(request: Request) {
     for (const scene of plan.scenes) {
       const rows = await sql`
         INSERT INTO storyboard_scenes (project_id, scene_order, title, prompt, narration_text, duration_seconds, visual_style, status)
-        VALUES (${projectId}::uuid, ${order++}, ${scene.title || null}, ${scene.visual_prompt}, ${scene.narration || null}, ${scene.duration_seconds}, ${JSON.stringify({ style: visualStyle, generatedBy: model })}::jsonb, 'draft')
+        VALUES (${projectId}::uuid, ${order++}, ${scene.title || null}, ${scene.visual_prompt}, ${scene.narration || null}, ${scene.duration_seconds}, ${JSON.stringify({ style: visualStyle, generatedBy: model, ...creativeOptions, selectedPlatform: director.selectedPlatform })}::jsonb, 'draft')
         RETURNING id, scene_order, title, prompt, narration_text, duration_seconds, status, created_at
       `;
       createdScenes.push(rows[0]);
@@ -174,7 +179,7 @@ export async function POST(request: Request) {
     await sql`UPDATE creative_projects SET title = CASE WHEN title = 'Untitled project' THEN ${plan.project_title} ELSE title END, updated_at = now() WHERE id = ${projectId}::uuid`;
     await sql`UPDATE generation_jobs SET status = 'succeeded', progress = 100, completed_at = now(), updated_at = now() WHERE id = ${jobId}::uuid`;
     await sql`UPDATE agent_runs SET status = 'succeeded', output_summary = ${JSON.stringify({ sceneCount: createdScenes.length, totalSeconds: total })}::jsonb, completed_at = now() WHERE id = ${agentRunId}::uuid`;
-    return NextResponse.json({ jobId, scenes: createdScenes, totalSeconds: existingTotal + total, model: generated.model, provider: generated.provider }, { status: 201 });
+    return NextResponse.json({ jobId, scenes: createdScenes, totalSeconds: existingTotal + total, model: generated.model, provider: generated.provider, creativeOptions, selectedPlatform: director.selectedPlatform }, { status: 201 });
   } catch (error) {
     const message = error instanceof Error ? error.message : "AI storyboard generation failed.";
     if (sql && jobId) {
