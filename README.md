@@ -8,6 +8,7 @@ A responsive creator workspace for planning, storyboarding, and eventually gener
 - Neon Managed Auth integration (enabled on the Neon `development` branch).
 - Authenticated project list and project creation API.
 - Per-project storyboard editor with prompt and narration fields.
+- Optional Gemini Creative Director endpoint that drafts and persists storyboard scenes when `GEMINI_API_KEY` is configured.
 - Private Neon Object Storage buckets provisioned on both production and development branches.
 - Authenticated presigned media uploads, verified asset registration, and private download links (requires branch-scoped storage credentials and bucket CORS setup).
 - Server-side ownership checks for projects and scenes.
@@ -40,6 +41,8 @@ A responsive creator workspace for planning, storyboarding, and eventually gener
 8. Open `http://localhost:3000`, create an account, create a project, add storyboard scenes, and upload media.
 
 ## AI provider status
+
+Text-based AI storyboard drafting is implemented through the Gemini Developer API when `GEMINI_API_KEY` is configured. Google AI Studio has a free tier for selected models, but quotas, model availability, and whether usage is billable depend on the account and can change; review [official pricing](https://ai.google.dev/gemini-api/docs/pricing) before enabling it. No provider call is made when the key is absent.
 
 Image/video generation and voiceover are **not yet operational**. Provider credentials alone are not sufficient: each provider needs an adapter, job lifecycle handling, output storage, usage/cost accounting, and end-to-end tests. The app must not invent successful outputs when a provider is unavailable.
 
