@@ -73,6 +73,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Free workspace limit reached: up to 10 AI storyboard drafts per day. Try again tomorrow." }, { status: 429 });
     }
 
+    const existingBefore = await sql`SELECT COALESCE(sum(duration_seconds), 0)::numeric AS total FROM storyboard_scenes WHERE project_id = ${projectId}::uuid`;
+    const existingBeforeSeconds = Number(existingBefore[0].total);
+    const remainingDuration = targetDuration - existingBeforeSeconds;
+    if (remainingDuration <= 0) {
+      return NextResponse.json({ error: "The storyboard already meets or exceeds the selected target duration. Choose a longer target or remove existing scenes first." }, { status: 422 });
+    }
+
     const model = process.env.GEMINI_TEXT_MODEL || "gemini-3.8-flash";
     const params = { purpose: "ai_storyboard", targetDuration, language: languageCode, visualStyle };
     const jobRows = await sql`
@@ -91,11 +98,11 @@ export async function POST(request: Request) {
     const prompt = [
       "Create a concise, production-ready storyboard for a short social video.",
       `Video idea: ${brief}`,
-      `Target total duration: exactly no more than ${targetDuration} seconds.`,
+      `Remaining storyboard duration available for new scenes: ${remainingDuration} seconds.`,
       `Narration language: ${language}.`,
       `Visual direction: ${visualStyle}.`,
       "Return JSON only with shape: {project_title:string, scenes:[{title:string, visual_prompt:string, narration:string, duration_seconds:number}]}",
-      "Create 2 to 6 scenes. Each scene duration must be positive, each visual_prompt must be concrete and usable as an image/video generation prompt, and the sum of all duration_seconds must be at most the target duration.",
+      "Create 2 to 6 scenes. Each scene duration must be positive, each visual_prompt must be concrete and usable as an image/video generation prompt, and the sum of all duration_seconds must be at most the remaining storyboard duration.",
       "Keep narration concise and in the requested language. If narration is not suitable, use an empty string. Do not include markdown fences or extra fields.",
     ].join("\n");
     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(process.env.GEMINI_API_KEY)}`, {
@@ -122,7 +129,7 @@ export async function POST(request: Request) {
     if (!modelText) throw new Error("Gemini returned no storyboard text.");
     const plan = parsePlan(modelText);
     const total = plan.scenes.reduce((sum, scene) => sum + scene.duration_seconds, 0);
-    if (total > targetDuration + 0.001 || total > 30) throw new Error("Generated storyboard exceeds the duration limit. Retry with a simpler brief.");
+    if (total > remainingDuration + 0.001 || total > 30) throw new Error("Generated storyboard exceeds the remaining duration limit. Retry with a simpler brief.");
 
     const existing = await sql`SELECT COALESCE(max(scene_order), -1)::int AS max_order, COALESCE(sum(duration_seconds), 0)::numeric AS total FROM storyboard_scenes WHERE project_id = ${projectId}::uuid`;
     const existingTotal = Number(existing[0].total);
