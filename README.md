@@ -56,4 +56,4 @@ Before enabling a provider, document its free-tier limits, pricing, rate limits,
 - API routes require an authenticated Neon Auth session before project or storyboard access.
 - Project and scene ownership is checked server-side.
 - Keep API keys, database connection strings, and cookie secrets out of Git.
-- Neon Auth is configured on the development branch only; production auth and deployment must be configured and tested separately.
+- Neon Auth has been provisioned on both production and development branches. Trusted-domain configuration, live sign-up/sign-in tests, and deployment environment setup still need verification.
