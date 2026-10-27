@@ -40,7 +40,7 @@ export async function POST(request: Request, context: Context) {
     const narration = typeof input.narrationText === "string" ? input.narrationText.trim().slice(0, 2000) : null;
     const duration = Number(input.durationSeconds ?? 5);
     if (!prompt) return NextResponse.json({ error: "Scene prompt is required." }, { status: 400 });
-    if (!Number.isFinite(duration) || duration <= 0 || duration > 30) return NextResponse.json({ error: "Scene duration must be between 0 and 30 seconds." }, { status: 400 });
+    if (!Number.isFinite(duration) || duration <= 0 || duration > 30) return NextResponse.json({ error: "Scene duration must be greater than 0 and at most 30 seconds." }, { status: 400 });
 
     const sql = getDb();
     const owned = await sql`SELECT id FROM creative_projects WHERE id = ${id}::uuid AND user_id = ${appUserId}`;
