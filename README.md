@@ -11,6 +11,7 @@ A responsive creator workspace for planning, storyboarding, and eventually gener
 - Optional Gemini Creative Director endpoint that drafts and persists storyboard scenes when `GEMINI_API_KEY` is configured.
 - Private Neon Object Storage buckets provisioned on both production and development branches.
 - Authenticated presigned media uploads, verified asset registration, and private download links (requires branch-scoped storage credentials and bucket CORS setup).
+- Basic abuse controls: 10 AI storyboard drafts per user per day, 20 upload URLs per day, 50 MB per file, and 250 MB registered media per account.
 - Server-side ownership checks for projects and scenes.
 - Storyboard total duration is validated server-side and cannot exceed 30 seconds.
 - Health endpoint at `/api/health` reports database/auth/provider configuration without exposing secrets.
@@ -44,7 +45,7 @@ A responsive creator workspace for planning, storyboarding, and eventually gener
 
 Text-based AI storyboard drafting is implemented through the Gemini Developer API when `GEMINI_API_KEY` is configured. Google AI Studio has a free tier for selected models, but quotas, model availability, and whether usage is billable depend on the account and can change; review [official pricing](https://ai.google.dev/gemini-api/docs/pricing) before enabling it. No provider call is made when the key is absent.
 
-Image/video generation and voiceover are **not yet operational**. Provider credentials alone are not sufficient: each provider needs an adapter, job lifecycle handling, output storage, usage/cost accounting, and end-to-end tests. The app must not invent successful outputs when a provider is unavailable.
+Image/video generation and voiceover are **not yet operational**. Provider credentials alone are not sufficient: each provider needs an adapter, job lifecycle handling, output storage, usage/cost accounting, and end-to-end tests. The Gemini storyboard endpoint currently caps usage at 10 drafts per account per day. The app must not invent successful outputs when a provider is unavailable.
 
 Before enabling a provider, document its free-tier limits, pricing, rate limits, and data handling. Store credentials only as environment secrets. The current health endpoint reports configuration only; it does not certify successful generation.
 
