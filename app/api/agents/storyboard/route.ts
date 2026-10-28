@@ -117,10 +117,17 @@ export async function POST(request: Request) {
     } catch (providerError) {
       const providerMessage = providerError instanceof Error ? providerError.message : "All configured AI providers failed.";
       const providerStatus = providerError && typeof providerError === "object" && "status" in providerError ? Number((providerError as { status: unknown }).status) : 502;
-      const safeReason = providerMessage.slice(0, 900);
-      await sql`UPDATE generation_jobs SET status = 'failed', error_code = ${providerStatus === 503 ? "no_provider" : "provider_chain_failed"}, error_message = ${safeReason}, completed_at = now(), updated_at = now() WHERE id = ${jobId}::uuid`;
-      await sql`UPDATE agent_runs SET status = 'failed', error_message = ${safeReason}, completed_at = now() WHERE id = ${agentRunId}::uuid`;
-      return NextResponse.json({ error: safeReason, jobId }, { status: providerStatus === 503 ? 503 : 502 });
+      // Keep provider diagnostics in server-side job records only; never echo raw provider
+      // messages because they may contain upstream response bodies or implementation details.
+      const internalReason = providerMessage.slice(0, 900);
+      await sql`UPDATE generation_jobs SET status = 'failed', error_code = ${providerStatus === 503 ? "no_provider" : "provider_chain_failed"}, error_message = ${internalReason}, completed_at = now(), updated_at = now() WHERE id = ${jobId}::uuid`;
+      await sql`UPDATE agent_runs SET status = 'failed', error_message = ${internalReason}, completed_at = now() WHERE id = ${agentRunId}::uuid`;
+      return NextResponse.json({
+        error: providerStatus === 503
+          ? "No AI provider is currently available. Check server configuration and try again."
+          : "AI storyboard generation failed because the configured providers could not complete the request.",
+        jobId,
+      }, { status: providerStatus === 503 ? 503 : 502 });
     }
     const modelText = generated.text;
     await sql`UPDATE generation_jobs SET provider = ${generated.provider}, model = ${generated.model}, updated_at = now() WHERE id = ${jobId}::uuid`;
@@ -146,7 +153,7 @@ export async function POST(request: Request) {
           `Draft JSON: ${JSON.stringify(plan)}`,
           "Return only JSON with shape {project_title:string, scenes:[{title:string, visual_prompt:string, narration:string, duration_seconds:number}]}",
           "Keep the exact same scene count and exact duration_seconds values as the draft. Do not include markdown fences.",
-        ].join("\\n");
+        ].join("\n");
         const reviewed = await generateCreativeJson(reviewPrompt);
         const reviewedPlan = parsePlan(reviewed.text);
         const sameDurations = reviewedPlan.scenes.length === plan.scenes.length
@@ -188,7 +195,14 @@ export async function POST(request: Request) {
     if (sql && agentRunId) {
       try { await sql`UPDATE agent_runs SET status = 'failed', error_message = ${message.slice(0, 500)}, completed_at = now() WHERE id = ${agentRunId}::uuid`; } catch {}
     }
-    const status = message.includes("not configured") ? 503 : (message.includes("seconds remaining") || message.includes("duration limit") || message.includes("target duration")) ? 422 : 502;
-    return NextResponse.json({ error: status === 503 ? message : message.slice(0, 300) }, { status });
+    const isConfigurationError = message.includes("not configured");
+    const isDurationError = message.includes("seconds remaining") || message.includes("duration limit") || message.includes("target duration");
+    const status = isConfigurationError ? 503 : isDurationError ? 422 : 502;
+    const publicError = isConfigurationError
+      ? "A required server configuration is missing. Review deployment settings."
+      : isDurationError
+        ? message
+        : "Storyboard generation failed. Please retry; internal provider and server details are not exposed to the browser.";
+    return NextResponse.json({ error: publicError }, { status });
   }
 }
