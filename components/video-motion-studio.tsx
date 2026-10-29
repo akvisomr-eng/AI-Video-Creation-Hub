@@ -186,7 +186,7 @@ export default function VideoMotionStudio() {
         <div className="motion-divider" />
         <div className="motion-step"><span>03</span><div><h2>Set the format</h2><p>Pick a destination aspect ratio and clip length.</p></div></div>
         <label className="motion-field">Aspect ratio<select value={ratio} onChange={(event) => setRatio(event.target.value as Ratio)}><option value="16:9">16:9 · YouTube / landscape</option><option value="9:16">9:16 · Reels / Shorts / TikTok</option><option value="1:1">1:1 · Square social post</option></select></label>
-        <label className="motion-field">Duration <strong>{duration} seconds</strong><input type="range" min="3" max="10" value={duration} onChange={(event) => setDuration(Number(event.target.value)} /></label>
+        <label className="motion-field">Duration <strong>{duration} seconds</strong><input type="range" min="3" max="10" value={duration} onChange={(event) => setDuration(Number(event.target.value))} /></label>
         <button className="motion-export" type="button" disabled={!loaded || recording} onClick={exportClip}>{recording ? "Rendering clip…" : "Export video · WebM"} <span>↗</span></button>
         <p className="motion-status" role="status">{status}</p>
         <p className="motion-note">This creates a real WebM file using animated camera movement. It does not yet synthesize new subject motion, generate AI frames, or export MP4. Those require additional model/rendering integrations.</p>
