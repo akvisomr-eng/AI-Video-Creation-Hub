@@ -72,7 +72,7 @@ export default function PhotoRetouchStudio() {
       ctx.globalAlpha = 1;
     }
     ctx.restore();
-    setPreview(canvas.toDataURL("image/jpeg", 0.92));
+    setPreview(canvas.toDataURL("image/png"));
   }, [source, imageLoaded, values, ratio, rotation, flipX]);
 
   function loadFile(file?: File) {
