@@ -1,52 +1,64 @@
 # Deployment readiness — AI Video Creator
 
-This runbook is for a new, isolated Vercel project. Do not reuse or edit environment variables on any other project.
+This runbook describes the current isolated Vercel project and the remaining acceptance gates. Do not treat a successful build as proof that authentication, database writes, media upload, or AI generation works end-to-end.
 
-## Deployment target
+## Deployment target and current state
 
 - Repository: `akvisomr-eng/AI-Video-Creation-Hub`
+- Vercel project: `ai-video-creator` (team `akvisio-autohost`)
 - Framework: Next.js App Router
-- Runtime: Node.js 22+
-- Database: Neon project `long-cloud-98554230`, branch `development` (`br-icy-wave-b33vb56m`) for preview only
-- Database region: `aws-ap-southeast-1`
-- Neon Auth base URL for development: `https://ep-silent-truth-b30i2dcr.neonauth.c-4.ap-southeast-1.aws.neon.tech/neondb/auth`
+- Production deployment from `main`: commit `e83a3be1263dfea96a2db467756327981e241bca`, state `READY`
+- Production aliases: `ai-video-creator-iota.vercel.app`, `ai-video-creator-akvisio-autohost.vercel.app`, and `ai-video-creator-git-main-akvisio-autohost.vercel.app`
+- Neon project: `long-cloud-98554230`, database `neondb`
+- Production branch: `br-purple-fire-b3mbm4jo`
+- Development branch: `br-icy-wave-b33vb56m`
 - Private media bucket: `creator-media`
-- Function region suggestion: Singapore (`sin1`) to keep app functions closer to Neon.
+- Vercel SSO protection is configured for Preview deployments; production deployment URLs are public. **Production environment variables have not been configured**, so the production app must be considered a visual/build deployment only until the health check and authentication are verified.
 
-## Required environment variables
+## Environment variables
 
-Set these only on the new AI Video Creator Vercel project. Use Vercel's encrypted/sensitive type for secrets.
+Use Vercel's encrypted/sensitive type for secrets. Never commit real values to GitHub or put credentials in `NEXT_PUBLIC_*`.
 
-| Variable | Preview requirement | Notes |
+| Variable | Preview | Production |
 | --- | --- | --- |
-| `DATABASE_URL` | Required | Pooled Neon connection string for the **development** branch; never use production for preview |
-| `NEON_AUTH_BASE_URL` | Required | Use the development branch's Auth base URL above |
-| `NEON_AUTH_COOKIE_SECRET` | Required | Generate a unique random secret of at least 32 characters; do not reuse another app's secret |
-| `APP_PUBLIC_URL` | Recommended | Exact deployed preview origin, without a trailing slash |
-| `AWS_ACCESS_KEY_ID` | Media-upload feature only | Branch-scoped Neon Object Storage credential |
-| `AWS_SECRET_ACCESS_KEY` | Media-upload feature only | Store as a secret |
-| `AWS_ENDPOINT_URL_S3` | Media-upload feature only | Development branch endpoint: `https://br-icy-wave-b33vb56m.storage.c-4.ap-southeast-1.aws.neon.tech` |
-| `AWS_REGION` | Media-upload feature only | `ap-southeast-1` |
-| `NEON_STORAGE_BUCKET` | Media-upload feature only | `creator-media` |
-| `GEMINI_API_KEY`, `GROQ_API_KEY`, `CEREBRAS_API_KEY`, `OPENROUTER_API_KEY` | Optional | Add only provider keys you have explicitly chosen; usage is quota-limited and provider data terms must be reviewed |
-| `AI_MULTI_AGENT_ENABLED` | Optional | Keep `false` by default to reduce requests and cost |
+| `DATABASE_URL` | Configured for isolated Neon development branch on the feature preview branches listed below | Not configured |
+| `NEON_AUTH_BASE_URL` | Configured for Neon development branch | Not configured |
+| `NEON_AUTH_COOKIE_SECRET` | Unique per feature preview branch | Not configured |
+| `APP_PUBLIC_URL` | Stable preview alias per feature branch | Not configured |
+| `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_ENDPOINT_URL_S3`, `AWS_REGION`, `NEON_STORAGE_BUCKET` | Not configured; media upload needs setup and verification | Not configured |
+| `GEMINI_API_KEY`, `GROQ_API_KEY`, `CEREBRAS_API_KEY`, `OPENROUTER_API_KEY` | Optional; none verified as operational | Not configured/verified |
+| `AI_MULTI_AGENT_ENABLED` | `false` | Not configured |
 
-Do not place API keys or database credentials in `NEXT_PUBLIC_*` variables. Do not commit real values to GitHub.
+Preview environment variables are scoped to `feat/photo-retouch-studio` and `feat/photo-retouch-studio-rebased`, using only the Neon development branch. Do not copy development credentials into Production.
 
-## Required sequence
+## Acceptance checklist
 
-1. Install/authorize the GitHub integration for the Vercel team, then create a dedicated Vercel project named `ai-video-creator` linked to this repository. Keep unrelated Vercel projects unchanged.
-2. Use the branch `feature/ai-video-creator-foundation-2026` as a Preview deployment first; do not promote it to Production until acceptance tests pass.
-3. Add the required development-only environment variables in the new Vercel project.
-4. After the preview URL exists, add that exact HTTPS origin as a trusted domain in Neon Auth for the development branch. Keep localhost origins for local development.
-5. Deploy Preview and verify `/api/health` returns HTTP 200 with database `ok`; verify `/api/capabilities` does not expose secrets; sign up/sign in; create a project and storyboard; verify asset upload and download with private storage.
-6. Confirm logs contain no credentials or private media URLs. Confirm limits and error paths are enforced.
-7. Only after the Preview acceptance checklist passes, decide separately whether to configure Production. Production must use a dedicated production environment, production Neon branch, its own cookie secret, and an explicitly approved deployment.
+Before calling the application operational, complete these checks against the current Preview deployment:
 
-## Current limitations / honest status
+1. `GET /api/health` returns HTTP 200 and reports database `ok`.
+2. `GET /api/capabilities` and `GET /api/ai/providers` do not expose credentials.
+3. Sign up, sign in, session persistence, and sign out work against the development Neon Auth branch.
+4. Create a project, create/edit storyboard scenes, reload the project, and confirm data persists.
+5. Confirm users cannot read or mutate another user's projects, scenes, or assets.
+6. Test media upload/download with branch-scoped storage credentials and bucket CORS; verify private URLs are not logged or exposed.
+7. Test rate limits and expected provider-failure behavior.
+8. Test Photo Retouch Studio import, crop, rotation, compare, PNG/JPEG export, and Image-to-Motion WebM export in a real browser.
+9. Confirm production environment configuration is separately reviewed and points only to the Neon production branch.
+10. Only after Preview acceptance passes, configure Production secrets, add the production aliases as Neon Auth trusted origins, deploy, and rerun the checks against Production.
 
-- GitHub Actions CI for the foundation currently passes (contract checks + Next.js build).
-- Neon development Auth and private storage are provisioned; the `creator-media` bucket exists.
-- The Neon development Auth trusted domains currently include localhost only. A deployment origin must be added after Vercel creates the preview URL.
-- Vercel project creation with GitHub linking is currently blocked because the GitHub integration is not installed/authorized for the selected Vercel team. This requires a one-time action in Vercel by an account owner; do not bypass it by deploying into another app.
-- Image generation, video generation, text-to-speech, background rendering, and end-to-end upload verification are not yet operational. Do not advertise the app as a complete AI video generator until those paths are implemented and tested.
+## Current feature boundaries
+
+- `/retouch`: browser-local pixel editing only; not AI restoration, object removal, or prompt-guided image generation.
+- `/video-studio`: browser-local camera motion and WebM export; not true generative image-to-video.
+- Storyboard generation supports configured text-provider adapters (Gemini, Groq, Cerebras, OpenRouter), but provider calls are not operational until credentials, quota, and live request/response handling are verified.
+- Image generation, true video generation, text-to-speech, background rendering, timeline editing, audio tracks, and MP4 export are not yet operational.
+- Media upload requires Neon Object Storage S3-compatible credentials and CORS configuration; bucket existence alone is not enough.
+- Native Android/iOS applications are not included.
+
+## Security and cost controls
+
+- Keep development and production Neon branches separate.
+- Keep provider API keys, database URLs, S3 credentials, and cookie secrets in encrypted/sensitive environment variables only.
+- Keep `AI_MULTI_AGENT_ENABLED=false` until provider calls are verified; the second review pass consumes additional quota.
+- Retain per-user storyboard and asset quotas; do not claim an AI feature is live based only on a configured key.
+- Use the public health endpoint as a configuration/database check, not as proof that AI generation works.

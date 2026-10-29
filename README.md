@@ -20,6 +20,7 @@ A responsive creator workspace for planning, storyboarding, and eventually gener
 - Storyboard total duration is validated server-side and cannot exceed 30 seconds.
 - Health endpoint at `/api/health` reports database/auth/provider configuration without exposing secrets.
 - Local-first Image-to-Motion Studio at `/video-studio`: animate a still image with camera motion and export WebM in supported browsers.
+- Browser-based Photo Retouch Studio at `/retouch`: local photo import, preset looks, light/color controls, crop, rotate/flip, compare original, and PNG/JPEG export. Source photos stay in the browser. AI restoration and prompt-guided edits are not connected; see [`docs/PHOTO_RETOUCH_NOTICES.md`](docs/PHOTO_RETOUCH_NOTICES.md).
 - GitHub Actions build workflow.
 
 ## Infrastructure
