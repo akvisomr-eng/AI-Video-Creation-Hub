@@ -36,7 +36,7 @@ export default function PhotoRetouchStudio() {
   useEffect(() => {
     const image = imageRef.current;
     const canvas = canvasRef.current;
-    if (!source || !image || !canvas || !image.complete || !image.naturalWidth) return;
+    if (!source || !imageLoaded || !image || !canvas || !image.complete || !image.naturalWidth) return;
     const sourceWidth = image.naturalWidth;
     const sourceHeight = image.naturalHeight;
     const rotated = Math.abs(rotation % 180) === 90;
@@ -73,7 +73,7 @@ export default function PhotoRetouchStudio() {
     }
     ctx.restore();
     setPreview(canvas.toDataURL("image/jpeg", 0.92));
-  }, [source, values, ratio, rotation, flipX]);
+  }, [source, imageLoaded, values, ratio, rotation, flipX]);
 
   function loadFile(file?: File) {
     if (!file) return;
@@ -81,7 +81,7 @@ export default function PhotoRetouchStudio() {
     if (file.size > 25 * 1024 * 1024) { setMessage("This browser-based editor supports files up to 25 MB."); return; }
     const reader = new FileReader();
     reader.onload = () => {
-      setSource(String(reader.result));
+      setImageLoaded(false);\n      setSource(String(reader.result));
       setFileName(file.name.replace(/\.[^.]+$/, "") || "retouched-photo");
       setPreset("natural"); setValues(DEFAULTS); setRatio("original"); setRotation(0); setFlipX(false); setMessage("Photo loaded locally. Your original file remains unchanged.");
     };
@@ -149,7 +149,7 @@ export default function PhotoRetouchStudio() {
     </section>}
     {message && <p className="retouch-message" role="status">{message}</p>}
     <footer className="retouch-footer"><span>AI VIDEO CREATOR · IMAGE STUDIO</span><span>Source photo stays unchanged · <a href="https://github.com/DJNormality/AI_Generator" target="_blank" rel="noreferrer">MIT feature reference</a></span></footer>
-    {source && <img ref={imageRef} src={source} alt="" className="retouch-source-image" onLoad={(event) => setDimensions({ width: event.currentTarget.naturalWidth, height: event.currentTarget.naturalHeight })} />}
+    {source && <img ref={imageRef} src={source} alt="" className="retouch-source-image" onLoad={(event) => { setDimensions({ width: event.currentTarget.naturalWidth, height: event.currentTarget.naturalHeight }); setImageLoaded(true); }} />}
     <canvas ref={canvasRef} className="retouch-source-image" aria-hidden="true" />
   </main>;
 }
