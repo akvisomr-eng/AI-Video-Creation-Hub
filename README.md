@@ -10,7 +10,7 @@ A responsive creator workspace for planning, storyboarding, and eventually gener
 - Per-project storyboard editor with prompt and narration fields.
 - Multi-provider Creative Director gateway for Gemini, Groq, Cerebras, and OpenRouter, with configurable fallback order and persisted provider/model attribution.
 - Media Director prompt-planning layer with creative presets (cinematic, commercial, anime, documentary, product hero, music video, social reel), aspect-ratio guidance, target-platform selection/recommendation, shot/camera/lighting prompts, and continuity constraints.
-- MIT provenance and attribution for workflow concepts adapted from `Hao0321/ai-media-generator`; see [`docs/THIRD_PARTY_NOTICES.md`](docs/THIRD_PARTY_NOTICES.md).
+- MIT provenance and attribution for workflow concepts adapted from `Hao0321/ai-media-generator`; see [`docs/THIRD_PARTY_NOTICES.md`](docs/THIRD_PARTY_NOTICES.md).\n- Browser-based Photo Retouch Studio at `/retouch`: local photo import, Natural/Portrait/Product/Vintage/Monochrome presets, brightness/contrast/saturation/warmth/clarity adjustments, aspect-ratio crop, rotate/flip, original comparison, and PNG/JPEG export. Basic edits run locally in the browser; source photos are not uploaded by this workflow. See [`docs/PHOTO_RETOUCH_NOTICES.md`](docs/PHOTO_RETOUCH_NOTICES.md).
 - Optional independent storyboard quality-review agent via `AI_MULTI_AGENT_ENABLED=true`; disabled by default to conserve free-tier quota, and gracefully falls back to the original draft if review fails.
 - Authenticated provider capability/status endpoint at `/api/ai/providers` (configuration status only; does not expose secrets or claim live provider health).
 - Private Neon Object Storage buckets provisioned on both production and development branches.
@@ -60,7 +60,7 @@ Before enabling a provider, document its free-tier limits, pricing, rate limits,
 
 ## Not yet implemented
 
-- AI image/video generation and retouching.
+- AI-powered photo restoration, face enhancement, object removal, prompt-guided image editing, AI colorization, and AI upscaling. The current `/retouch` editor provides local pixel adjustments only; AI-model features are not yet connected.
 - Text-to-speech, subtitle generation, video rendering/export.
 - Browser upload still needs live verification against the branch's CORS and S3 credentials.
 - Background job worker and provider retry/cancellation.
