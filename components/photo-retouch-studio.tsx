@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 type Preset = "natural" | "portrait" | "product" | "vintage" | "mono";
 type Ratio = "original" | "1:1" | "4:5" | "3:2" | "16:9" | "9:16";
@@ -17,6 +17,7 @@ const DEFAULTS = { brightness: 0, contrast: 0, saturation: 0, warmth: 0, sharpne
 
 export default function PhotoRetouchStudio() {
   const [source, setSource] = useState<string | null>(null);
+  const [imageLoaded, setImageLoaded] = useState(false);
   const [fileName, setFileName] = useState("retouched-photo");
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
   const [preset, setPreset] = useState<Preset>("natural");
@@ -81,7 +82,8 @@ export default function PhotoRetouchStudio() {
     if (file.size > 25 * 1024 * 1024) { setMessage("This browser-based editor supports files up to 25 MB."); return; }
     const reader = new FileReader();
     reader.onload = () => {
-      setImageLoaded(false);\n      setSource(String(reader.result));
+      setImageLoaded(false);
+      setSource(String(reader.result));
       setFileName(file.name.replace(/\.[^.]+$/, "") || "retouched-photo");
       setPreset("natural"); setValues(DEFAULTS); setRatio("original"); setRotation(0); setFlipX(false); setMessage("Photo loaded locally. Your original file remains unchanged.");
     };
