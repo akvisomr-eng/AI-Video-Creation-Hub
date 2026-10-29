@@ -19,6 +19,7 @@ A responsive creator workspace for planning, storyboarding, and eventually gener
 - Server-side ownership checks for projects and scenes.
 - Storyboard total duration is validated server-side and cannot exceed 30 seconds.
 - Health endpoint at `/api/health` reports database/auth/provider configuration without exposing secrets.
+- Local-first Image-to-Motion Studio at `/video-studio`: animate a still image with camera motion and export WebM in supported browsers.
 - GitHub Actions build workflow.
 
 ## Infrastructure
@@ -60,8 +61,10 @@ Before enabling a provider, document its free-tier limits, pricing, rate limits,
 
 ## Not yet implemented
 
-- AI image/video generation and retouching.
-- Text-to-speech, subtitle generation, video rendering/export.
+- Generative AI image/video generation and advanced AI retouching (separate from the local camera-motion and basic retouch tools).
+- AI text-to-speech and automatic subtitle generation.
+- Multi-clip timeline editing, audio tracks, and MP4 export.
+- True generative image-to-video (new subject motion / AI-generated frames).
 - Browser upload still needs live verification against the branch's CORS and S3 credentials.
 - Background job worker and provider retry/cancellation.
 - Native Android/iOS applications.
