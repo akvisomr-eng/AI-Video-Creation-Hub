@@ -45,14 +45,15 @@ export async function POST() {
       return NextResponse.json({ ok: true, provider: result.provider, model: result.model, latencyMs });
     } catch (error) {
       const providerStatus = error && typeof error === "object" && "status" in error ? Number((error as { status: unknown }).status) : 0;
+      const providerCode = error && typeof error === "object" && "code" in error ? String((error as { code: unknown }).code) : "";
       await sql`
         UPDATE generation_jobs
-        SET status = 'failed', progress = 0, error_code = 'provider_health_test_failed',
+        SET status = 'failed', progress = 0, error_code = ${providerCode === "provider_rate_limited" ? "provider_rate_limited" : providerStatus === 429 ? "free_daily_quota" : "provider_health_test_failed"},
             error_message = 'The selected provider did not complete the connection test.',
             completed_at = now(), updated_at = now()
         WHERE id = ${jobId}::uuid
       `;
-      return NextResponse.json({ error: providerStatus === 429 ? "The free-provider daily request budget has been reached. Try again after the daily reset." : "Provider connection test failed. Check the server-side key, model allowlist, and provider quota." }, { status: providerStatus === 429 ? 429 : 502 });
+      return NextResponse.json({ error: providerStatus === 429 && providerCode === "provider_rate_limited" ? "The free-provider per-minute limit has been reached. Retry shortly." : providerStatus === 429 ? "The free-provider daily request budget has been reached. Try again after the daily reset." : "Provider connection test failed. Check the server-side key, model allowlist, and provider quota." }, { status: providerStatus === 429 ? 429 : 502 });
     }
   } catch {
     return NextResponse.json({ error: "Could not run the provider connection test." }, { status: 500 });
