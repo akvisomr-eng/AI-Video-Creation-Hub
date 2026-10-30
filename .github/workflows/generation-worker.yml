@@ -22,7 +22,6 @@ jobs:
           WORKER_URL: ${{ secrets.GENERATION_WORKER_URL }}
           WORKER_SECRET: ${{ secrets.GENERATION_WORKER_SECRET }}
           VERCEL_BYPASS: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
-          VERCEL_BYPASS: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
         if: ${{ env.WORKER_URL != '' && env.WORKER_SECRET != '' && env.VERCEL_BYPASS != '' }}
         run: |
           curl --fail-with-body --silent --show-error --max-time 75 \
@@ -36,4 +35,4 @@ jobs:
           WORKER_SECRET: ${{ secrets.GENERATION_WORKER_SECRET }}
           VERCEL_BYPASS: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
         if: ${{ env.WORKER_URL == '' || env.WORKER_SECRET == '' || env.VERCEL_BYPASS == '' }}
-        run: echo "Worker is idle. Configure GENERATION_WORKER_URL and GENERATION_WORKER_SECRET repository secrets to activate scheduled processing."
+        run: echo "Worker is idle. Configure GENERATION_WORKER_URL, GENERATION_WORKER_SECRET, and VERCEL_AUTOMATION_BYPASS_SECRET repository secrets to activate scheduled processing."
