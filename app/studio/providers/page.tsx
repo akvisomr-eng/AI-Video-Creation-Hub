@@ -6,6 +6,7 @@ import Link from "next/link";
 type Provider = { id: string; label: string; model: string };
 type ProviderResponse = {
   text: Provider[];
+  usage: Array<Provider & { used: number; limit: number; remaining: number }>;
   image: { configured: boolean; status: string; note: string };
   video: { configured: boolean; status: string; note: string };
   speech: { configured: boolean; status: string; note: string };
@@ -55,11 +56,11 @@ export default function ProviderSettingsPage() {
 
       <section style={{ border: "1px solid #30343e", background: "#151820", borderRadius: 14, padding: 20, marginBottom: 16 }}>
         <h2 style={{ fontSize: 16, margin: "0 0 12px" }}>Text generation</h2>
-        {loading ? <p style={{ color: "#a1a1aa" }}>Checking configuration…</p> : data?.text.length ? <div style={{ display: "grid", gap: 10 }}>{data.text.map(provider => <div key={provider.id} style={{ display: "flex", justifyContent: "space-between", gap: 16, flexWrap: "wrap", borderTop: "1px solid #30343e", paddingTop: 12 }}><div><b>{provider.label}</b><div style={{ color: "#a1a1aa", fontSize: 12, marginTop: 4 }}>{provider.id} · {provider.model}</div></div><span style={{ color: "#c5d78c", fontSize: 12 }}>Allowlisted & configured</span></div>)}</div> : <p style={{ color: "#f0b6a8" }}>No active provider key found in the current allowlist.</p>}
+        {loading ? <p style={{ color: "#a1a1aa" }}>Checking configuration…</p> : data?.text.length ? <div style={{ display: "grid", gap: 10 }}>{data.text.map(provider => <div key={provider.id} style={{ display: "flex", justifyContent: "space-between", gap: 16, flexWrap: "wrap", borderTop: "1px solid #30343e", paddingTop: 12 }}><div><b>{provider.label}</b><div style={{ color: "#a1a1aa", fontSize: 12, marginTop: 4 }}>{provider.id} · {provider.model}</div></div><span style={{ color: "#c5d78c", fontSize: 12 }}>Allowlisted · {data.usage.find(item => item.id === provider.id)?.remaining ?? "?"} requests remaining today</span></div>)}</div> : <p style={{ color: "#f0b6a8" }}>No active provider key found in the current allowlist.</p>}
         <p style={{ color: "#a1a1aa", fontSize: 12, lineHeight: 1.6, marginTop: 16 }}>{data?.note ?? "Configured does not mean live-tested."}</p>
         <button type="button" onClick={() => void testProvider()} disabled={testing || loading || !data?.text.length} style={{ marginTop: 10, background: "#d8ee9c", color: "#171a12", border: 0, borderRadius: 9, padding: "11px 16px", fontWeight: 700, cursor: "pointer", opacity: testing || loading || !data?.text.length ? .5 : 1 }}>{testing ? "Testing provider…" : "Run text-provider test"}</button>
         {result && <div role="status" style={{ marginTop: 14, padding: 12, borderRadius: 9, background: "#20242d", color: result.ok ? "#c5d78c" : "#ffb6a8", fontSize: 13 }}>{result.ok ? `Connection passed: ${result.provider} / ${result.model} · ${result.latencyMs} ms` : result.error}</div>}
-        <p style={{ color: "#777e8b", fontSize: 11, lineHeight: 1.6, marginTop: 12 }}>A test sends one short request and consumes the selected provider's quota. The default route is OpenRouter's free-model selector; other providers must be explicitly added to AI_TEXT_PROVIDER_ORDER.</p>
+        <p style={{ color: "#777e8b", fontSize: 11, lineHeight: 1.6, marginTop: 12 }}>A test sends one short request and consumes the selected provider's quota. Every provider is capped at 40 API requests per UTC day, leaving a safety buffer below OpenRouter's 50/day free-plan limit. The default route is OpenRouter's free-model selector; other providers must be explicitly added to AI_TEXT_PROVIDER_ORDER.</p>
       </section>
 
       <section style={{ border: "1px solid #30343e", background: "#151820", borderRadius: 14, padding: 20, marginBottom: 16 }}>
