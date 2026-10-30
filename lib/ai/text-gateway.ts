@@ -144,12 +144,11 @@ export async function generateCreativeJson(prompt: string): Promise<TextGenerati
       const status = typeof error === "object" && error !== null && "status" in error ? Number((error as { status: unknown }).status) : 0;
       const message = error instanceof Error ? error.message : "Unknown provider error";
       failures.push(`${config.label}: ${message.slice(0, 220)}`);
-      // Fall back only for transient failures, quota limits, or server errors.
-      // Invalid keys/model access should be fixed rather than silently masked.
-      if (status && !retryable(status)) {
-        if (status === 401 || status === 403 || status === 404) continue;
-        continue;
-      }
+      // Try another provider only when the failure is plausibly transient.
+      // Authentication, permission, invalid-request, and missing-model errors are
+      // configuration/actionable failures; retrying every provider only adds latency
+      // and can obscure the real issue.
+      if (status && !retryable(status)) break;
     }
   }
   throw Object.assign(new Error(`All configured text AI providers failed. ${failures.join(" | ").slice(0, 900)}`), { status: 502, code: "all_providers_failed" });
