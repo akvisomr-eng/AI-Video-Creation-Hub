@@ -1,4 +1,4 @@
-import { send } from "@vercel/queue";
+import { send } from "@/lib/queue";
 import { NextResponse } from "next/server";
 import { requireSession } from "@/lib/auth/server";
 import { getDb } from "@/lib/db";
