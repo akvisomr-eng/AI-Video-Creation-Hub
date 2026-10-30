@@ -90,7 +90,7 @@ export default function GenerationJobsPage() {
         <div style={muted}>Updated {date(job.updatedAt)}{job.completedAt && <span style={{ display: "block", marginTop: 4 }}>Completed {date(job.completedAt)}</span>}{job.actualCostUsd !== null && <span style={{ display: "block", marginTop: 4 }}>Actual cost: {cost(job.actualCostUsd)}</span>}{job.errorCode && <span style={{ display: "block", marginTop: 5 }}>Error code: {job.errorCode}</span>}{job.errorMessage && <span style={{ display: "block", color: "#ffaaa0", marginTop: 6, overflowWrap: "anywhere" }}>{job.errorMessage}</span>}{job.result && <details style={{ marginTop: 9, color: "#d6f379" }}><summary style={{ cursor: "pointer", fontSize: 12 }}>View generated result</summary><pre style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere", color: "#d4d6dc", fontSize: 11, lineHeight: 1.6, maxHeight: 360, overflow: "auto", marginTop: 8 }}>{JSON.stringify(job.result, null, 2)}</pre></details>}</div>
       </article>)}</div>}
     </section>
-    <p style={{ ...muted, marginTop: 18, lineHeight: 1.7 }}>This page reports recorded job metadata only. It does not start, retry, cancel, or render jobs. Availability of image, video, and audio generation still depends on a verified provider integration.</p>
+    <p style={{ ...muted, marginTop: 18, lineHeight: 1.7 }}>This page reports queued job status and completed text results. Image, video, audio, and MP4 rendering still require separate verified provider and media-processing integrations.</p>
     <style jsx>{`@media (max-width: 760px) { .job-card { grid-template-columns: minmax(0, 1fr) !important; gap: 10px !important; } }`}</style>
   </main>;
 }
