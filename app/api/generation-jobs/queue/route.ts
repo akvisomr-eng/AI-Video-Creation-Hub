@@ -1,7 +1,9 @@
+import { send } from "@vercel/queue";
 import { NextResponse } from "next/server";
 import { requireSession } from "@/lib/auth/server";
 import { getDb } from "@/lib/db";
 import { getOrCreateAppUser } from "@/lib/user";
+import { getConfiguredTextProviders } from "@/lib/ai/text-gateway";
 
 export const runtime = "nodejs";
 export const maxDuration = 10;
@@ -10,9 +12,14 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-
 
 export async function POST(request: Request) {
   try {
-    if (process.env.GENERATION_QUEUE_ENABLED !== "true") return NextResponse.json({ error: "Asynchronous generation is not enabled for this environment yet." }, { status: 503 });
+    if (process.env.GENERATION_QUEUE_ENABLED !== "true") {
+      return NextResponse.json({ error: "Asynchronous generation is not enabled for this environment yet." }, { status: 503 });
+    }
     const user = await requireSession();
     if (!user) return NextResponse.json({ error: "Sign in is required." }, { status: 401 });
+    if (!getConfiguredTextProviders().length) {
+      return NextResponse.json({ error: "No text provider is configured. No job was queued and no provider was called." }, { status: 503 });
+    }
 
     const body: unknown = await request.json();
     if (!body || typeof body !== "object") return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
@@ -53,12 +60,27 @@ export async function POST(request: Request) {
       const existing = await sql`SELECT id, status, created_at FROM generation_jobs WHERE user_id = ${appUserId} AND idempotency_key = ${idempotencyKey} LIMIT 1`;
       return NextResponse.json({ job: existing[0], reused: true }, { status: 200 });
     }
-    return NextResponse.json({ job: rows[0], reused: false }, { status: 202 });
+
+    const job = rows[0];
+    try {
+      await send("generation-jobs", { jobId: String(job.id) }, { idempotencyKey: String(job.id) });
+    } catch {
+      await sql`
+        UPDATE generation_jobs
+        SET status = 'failed', error_code = 'queue_publish_failed',
+            error_message = 'The managed queue could not accept this job.',
+            completed_at = now(), updated_at = now()
+        WHERE id = ${job.id}::uuid AND status = 'queued'
+      `;
+      return NextResponse.json({ error: "The managed generation queue is temporarily unavailable. Please retry." }, { status: 503 });
+    }
+
+    return NextResponse.json({ job, reused: false }, { status: 202 });
   } catch (error) {
     const message = error instanceof Error ? error.message : "";
     const unavailable = message.toLowerCase().includes("not configured");
     return NextResponse.json(
-      { error: unavailable ? "The generation queue is not configured yet." : "Could not queue this generation job." },
+      { error: unavailable ? "The generation queue is not configured for this deployment." : "Could not queue this generation job." },
       { status: unavailable ? 503 : 500 },
     );
   }
