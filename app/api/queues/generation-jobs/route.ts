@@ -88,7 +88,6 @@ export const POST = handleCallback(async (message: QueueMessage, metadata) => {
 }, {
   visibilityTimeoutSeconds: 300,
   retry: (_error, metadata) => {
-    if (Number(metadata.deliveryCount ?? 1) >= 3) return { acknowledge: true };
     return { afterSeconds: Math.min(300, 15 * (2 ** Math.max(0, Number(metadata.deliveryCount ?? 1) - 1))) };
   },
 });
