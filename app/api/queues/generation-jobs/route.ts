@@ -71,7 +71,7 @@ export const POST = handleCallback(async (message: QueueMessage, metadata) => {
     const deliveryCount = Number(metadata.deliveryCount ?? 1);
     const providerStatus = error && typeof error === "object" && "status" in error ? Number((error as { status: unknown }).status) : 0;
     const quotaReached = providerStatus === 429;
-    const finalAttempt = quotaReached || deliveryCount >= 3;
+    const finalAttempt = quotaReached || Number(job.attempt_count) >= Number(job.max_attempts ?? 3);
     await sql`
       UPDATE generation_jobs
       SET status = ${finalAttempt ? "failed" : "queued"},
