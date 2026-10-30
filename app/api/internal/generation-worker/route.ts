@@ -15,6 +15,7 @@ function authorized(request: Request) {
 
 export async function POST(request: Request) {
   if (!authorized(request)) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  if (process.env.GENERATION_QUEUE_ENABLED !== "true") return NextResponse.json({ error: "Generation queue is disabled." }, { status: 503 });
   if (!process.env.DATABASE_URL) return NextResponse.json({ error: "Worker database is not configured." }, { status: 503 });
 
   const sql = getDb();
