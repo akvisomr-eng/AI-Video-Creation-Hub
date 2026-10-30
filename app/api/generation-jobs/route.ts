@@ -33,7 +33,7 @@ export async function GET(request: Request) {
       jobs = await sql`
         SELECT
           id, project_id AS "projectId", job_type AS "jobType",
-          provider, model, status, progress,
+          provider, model, status, progress, parameters->>'purpose' AS purpose, parameters->'result' AS result,
           error_code AS "errorCode", error_message AS "errorMessage",
           estimated_cost_usd AS "estimatedCostUsd", actual_cost_usd AS "actualCostUsd",
           started_at AS "startedAt", completed_at AS "completedAt",
