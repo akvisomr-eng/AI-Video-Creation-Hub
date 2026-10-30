@@ -21,4 +21,13 @@ CREATE INDEX IF NOT EXISTS idx_generation_jobs_queue
 CREATE INDEX IF NOT EXISTS idx_generation_jobs_expired_lease
   ON public.generation_jobs (locked_at)
   WHERE status = 'processing';
+CREATE TABLE IF NOT EXISTS public.ai_provider_daily_usage (
+  usage_date date NOT NULL DEFAULT CURRENT_DATE,
+  provider text NOT NULL,
+  request_count integer NOT NULL DEFAULT 0 CHECK (request_count >= 0),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (usage_date, provider)
+);
+CREATE INDEX IF NOT EXISTS idx_ai_provider_daily_usage_date
+  ON public.ai_provider_daily_usage (usage_date DESC);
 COMMIT;
