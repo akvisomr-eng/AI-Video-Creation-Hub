@@ -36,7 +36,7 @@ Preview environment variables are scoped to `feat/photo-retouch-studio` and `fea
 ## Asynchronous text-generation queue (Preview only until configured)
 
 - Apply `database/migrations/20261030_async_generation_queue.sql` to the Neon **development** branch. The migration is additive and re-runnable; do not apply it to Production before a separately reviewed rollout.
-- The signed-in endpoint `POST /api/generation-jobs/queue` accepts `projectId`, `prompt`, and an optional `idempotencyKey`; it enforces project ownership, 10 jobs per user/day, and 15 jobs/day across the workspace to protect the default free-provider request budget.
+- The signed-in endpoint `POST /api/generation-jobs/queue` accepts `projectId`, `prompt`, and an optional `idempotencyKey`; it enforces project ownership, 10 jobs per user/day. All text-provider requests share an atomic 40-request/day cap per provider (with a 10-request safety buffer against OpenRouter's 50/day free-plan limit).
 - `AI_TEXT_PROVIDER_ORDER` is an allowlist as well as an order. By default only OpenRouter's `openrouter/free` route is selected; Gemini, Groq, and Cerebras are not automatically used as fallbacks. Add them explicitly only after reviewing the account's free/paid tier and billing behavior.
 - Set `GENERATION_QUEUE_ENABLED=true` only after a free-tier provider, quota, and billing behavior are verified. It defaults to disabled.
 - The application publishes messages to the managed Vercel Queues topic `generation-jobs`; the push consumer is registered in `vercel.json`. Vercel Queues handles durable delivery, visibility leases, and redelivery. The database remains the source of truth for per-user job status and results.
