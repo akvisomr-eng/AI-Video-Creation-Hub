@@ -8,6 +8,7 @@ const sceneRoute = await readFile(new URL("../app/api/projects/[id]/scenes/route
 const readme = await readFile(new URL("../README.md", import.meta.url), "utf8");
 const generationJobsRoute = await readFile(new URL("../app/api/generation-jobs/route.ts", import.meta.url), "utf8");
 const generationJobsPage = await readFile(new URL("../app/studio/jobs/page.tsx", import.meta.url), "utf8");
+const projectWorkspace = await readFile(new URL("../components/project-workspace.tsx", import.meta.url), "utf8");
 const queueRoute = await readFile(new URL("../app/api/generation-jobs/queue/route.ts", import.meta.url), "utf8");
 const workerRoute = await readFile(new URL("../app/api/internal/generation-worker/route.ts", import.meta.url), "utf8");
 const queueMigration = await readFile(new URL("../database/migrations/20261030_async_generation_queue.sql", import.meta.url), "utf8");
@@ -42,4 +43,6 @@ assert.match(workerRoute, /attempt_count < max_attempts/, "Worker must enforce b
 assert.match(workerRoute, /worker_lease_expired/, "Worker must recover expired processing leases.");
 assert.match(queueMigration, /ADD COLUMN IF NOT EXISTS/, "Queue migration must be additive and repeatable.");
 assert.match(generationJobsRoute, /parameters->'result' AS result/, "Owner-scoped job history must return completed JSON output.");
+assert.match(projectWorkspace, /\/api\/generation-jobs\/queue/, "Project workspace must expose the async queue action.");
+assert.match(projectWorkspace, /Queue async text draft/, "Async queue action must be explicitly labeled as text-only.");
 console.log("Foundation contract checks passed.");
