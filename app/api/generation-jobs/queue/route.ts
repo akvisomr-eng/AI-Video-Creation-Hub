@@ -46,13 +46,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Daily free-workspace queue limit reached (10 jobs). Try again tomorrow." }, { status: 429 });
     }
 
-    // OpenRouter free tier allows 50 requests/day. Each job may be delivered up to
-    // three times, so cap this app at 15 new jobs/day across all users.
-    const globalDaily = await sql`SELECT count(*)::int AS count FROM generation_jobs WHERE parameters->>'purpose' = 'async_text_generation' AND created_at >= date_trunc('day', now())`;
-    if (Number(globalDaily[0]?.count ?? 0) >= 15) {
-      return NextResponse.json({ error: "Daily free-provider capacity reached for this workspace. Try again tomorrow." }, { status: 429 });
-    }
-
     const rows = await sql`
       INSERT INTO generation_jobs
         (user_id, project_id, job_type, provider, model, status, progress, prompt, parameters, idempotency_key, max_attempts)
