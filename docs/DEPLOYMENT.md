@@ -13,7 +13,7 @@ This runbook describes the current isolated Vercel project and the remaining acc
 - Production branch: `br-purple-fire-b3mbm4jo`
 - Development branch: `br-icy-wave-b33vb56m`
 - Private media bucket: `creator-media`
-- Vercel SSO protection is configured for Preview deployments; production deployment URLs are public. **Production environment variables have not been configured**, so the production app must be considered a visual/build deployment only until the health check and authentication are verified.
+- Vercel SSO protection is configured for Preview deployments; production deployment URLs are public. Production has encrypted `DATABASE_URL`, `NEON_AUTH_BASE_URL`, and `NEON_AUTH_COOKIE_SECRET`, plus `APP_PUBLIC_URL` and `AI_MULTI_AGENT_ENABLED=false`. Values were not decrypted or inspected. Database target, health, and authentication still require a runtime verification before claiming Production is operational.
 
 ## Environment variables
 
@@ -21,17 +21,17 @@ Use Vercel's encrypted/sensitive type for secrets. Never commit real values to G
 
 | Variable | Preview | Production |
 | --- | --- | --- |
-| `DATABASE_URL` | Configured for isolated Neon development branch on the feature preview branches listed below | Not configured |
-| `NEON_AUTH_BASE_URL` | Configured for Neon development branch | Not configured |
-| `NEON_AUTH_COOKIE_SECRET` | Unique per feature preview branch | Not configured |
-| `APP_PUBLIC_URL` | Stable preview alias per feature branch | Not configured |
+| `DATABASE_URL` | Configured only on the older feature-preview branches listed below | Configured (target not runtime-verified) |
+| `NEON_AUTH_BASE_URL` | Configured only on the older feature-preview branches listed below | Configured (target not runtime-verified) |
+| `NEON_AUTH_COOKIE_SECRET` | Unique per older feature preview branch | Configured (value not inspected) |
+| `APP_PUBLIC_URL` | Stable preview alias on older feature branches only | Configured |
 | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_ENDPOINT_URL_S3`, `AWS_REGION`, `NEON_STORAGE_BUCKET` | Not configured; media upload needs setup and verification | Not configured |
 | `GEMINI_API_KEY`, `GROQ_API_KEY`, `CEREBRAS_API_KEY`, `OPENROUTER_API_KEY` | Optional; none verified as operational | Not configured/verified |
-| `AI_MULTI_AGENT_ENABLED` | `false` | Not configured |
-| `AI_TEXT_PROVIDER_ORDER` | `openrouter` (free-model route only by default) | `openrouter` |
-| `GENERATION_QUEUE_ENABLED` | `false` until provider/quota verification | `false` |
+| `AI_MULTI_AGENT_ENABLED` | `false` on older feature preview branches | `false` |
+| `AI_TEXT_PROVIDER_ORDER` | Code default is `openrouter`; no provider key configured | Code default is `openrouter`; no provider key configured |
+| `GENERATION_QUEUE_ENABLED` | Defaults to `false`; no override configured | Defaults to `false`; no override configured |
 
-Preview environment variables are scoped to `feat/photo-retouch-studio` and `feat/photo-retouch-studio-rebased`, using only the Neon development branch. Do not copy development credentials into Production.
+Preview environment variables are currently scoped to `feat/photo-retouch-studio`, `feat/photo-retouch-studio-rebased`, and `fix/storyboard-error-redaction-2026-10-27`. The current async-queue branch has no branch-scoped database/auth credentials, so its build preview is not yet an authenticated runtime acceptance environment. Do not copy development credentials into Production.
 
 ## Asynchronous text-generation queue (Preview only until configured)
 
