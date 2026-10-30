@@ -44,7 +44,7 @@ assert.match(queueConsumer, /deliveryCount/, "Queue consumer must account for re
 assert.ok(queueRoute.includes('send("generation-jobs"'), "Queue endpoint must publish to the managed generation topic.");
 assert.equal(vercelConfig.functions["app/api/queues/generation-jobs/route.ts"].experimentalTriggers[0].topic, "generation-jobs", "Vercel must route the generation topic to its consumer.");
 assert.match(queueMigration, /ADD COLUMN IF NOT EXISTS/, "Queue migration must be additive and repeatable.");
-assert.match(generationJobsRoute, /parameters->'result' AS result/, "Owner-scoped job history must return completed JSON output.");
+assert.equal((generationJobsRoute.match(/parameters->'result' AS result/g) ?? []).length, 2, "Both generation history query paths must return completed JSON output.");
 assert.match(projectWorkspace, /\/api\/generation-jobs\/queue/, "Project workspace must expose the async queue action.");
 assert.match(projectWorkspace, /Queue async text draft/, "Async queue action must be explicitly labeled as text-only.");
 console.log("Foundation contract checks passed.");
