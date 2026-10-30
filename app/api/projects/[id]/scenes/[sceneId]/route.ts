@@ -60,6 +60,7 @@ export async function DELETE(_request: Request, context: Context) {
     const auth = await authorize(id, sceneId);
     if (auth.response) return auth.response;
     await auth.sql`DELETE FROM storyboard_scenes WHERE id = ${sceneId}::uuid AND project_id = ${id}::uuid`;
+    await auth.sql`UPDATE storyboard_scenes SET scene_order = scene_order + 1000 WHERE project_id = ${id}::uuid`;
     await auth.sql`
       WITH ordered AS (
         SELECT id, row_number() OVER (ORDER BY scene_order, created_at) - 1 AS next_order
