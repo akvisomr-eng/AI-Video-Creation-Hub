@@ -42,7 +42,7 @@ assert.match(generationJobsPage, /Try again/, "Generation history must provide a
 assert.match(queueRoute, /requireSession\(\)/, "Only signed-in users may enqueue generation jobs.");
 assert.match(queueRoute, /WHERE id = \$\{projectId\}::uuid AND user_id = \$\{appUserId\}/, "Queue creation must enforce project ownership.");
 assert.match(queueRoute, /idempotencyKey/, "Queue creation must support idempotent submissions.");
-assert.match(queueRoute, /globalDaily/, "Free-tier provider usage must have a workspace-wide daily cap.");
+assert.match(providerUsage, /FREE_TEXT_PROVIDER_DAILY_LIMIT = 40/, "Free-tier provider usage must have a workspace-wide daily cap.");
 assert.match(queueClient, /new QueueClient\(\{ region: "iad1" \}\)/, "Queue producer and consumer must use the deployment region.");
 assert.match(queueConsumer, /handleCallback/, "Generation jobs must be processed by the managed Vercel queue consumer.");
 assert.match(queueConsumer, /visibilityTimeoutSeconds: 300/, "Queue consumer must use an explicit visibility lease.");
