@@ -70,14 +70,17 @@ export const POST = handleCallback(async (message: QueueMessage, metadata) => {
   } catch (error) {
     const deliveryCount = Number(metadata.deliveryCount ?? 1);
     const providerStatus = error && typeof error === "object" && "status" in error ? Number((error as { status: unknown }).status) : 0;
-    const quotaReached = providerStatus === 429;
-    const finalAttempt = quotaReached || Number(job.attempt_count) >= Number(job.max_attempts ?? 3);
+    const providerCode = error && typeof error === "object" && "code" in error ? String((error as { code: unknown }).code) : "";
+    const rateLimited = providerStatus === 429 && providerCode === "provider_rate_limited";
+    const quotaReached = providerStatus === 429 && !rateLimited;
+    const finalAttempt = quotaReached || (!rateLimited && Number(job.attempt_count) >= Number(job.max_attempts ?? 3));
     await sql`
       UPDATE generation_jobs
       SET status = ${finalAttempt ? "failed" : "queued"},
           progress = 0,
-          error_code = ${quotaReached ? "free_daily_quota" : "worker_generation_failed"},
-          error_message = ${quotaReached ? "The free-provider daily request budget has been reached. Try again after the daily reset." : finalAttempt ? "Generation failed after the managed queue retry limit." : "Temporary provider failure; the managed queue will retry."},
+          attempt_count = CASE WHEN ${rateLimited} THEN GREATEST(attempt_count - 1, 0) ELSE attempt_count END,
+          error_code = ${quotaReached ? "free_daily_quota" : rateLimited ? "provider_rate_limited" : "worker_generation_failed"},
+          error_message = ${quotaReached ? "The free-provider daily request budget has been reached. Try again after the daily reset." : rateLimited ? "Provider is at its per-minute free-tier limit; retrying shortly." : finalAttempt ? "Generation failed after the managed queue retry limit." : "Temporary provider failure; the managed queue will retry."},
           completed_at = ${finalAttempt ? new Date().toISOString() : null}::timestamptz,
           locked_at = NULL,
           worker_token = NULL,
@@ -89,7 +92,9 @@ export const POST = handleCallback(async (message: QueueMessage, metadata) => {
   }
 }, {
   visibilityTimeoutSeconds: 300,
-  retry: (_error, metadata) => {
-    return { afterSeconds: Math.min(300, 15 * (2 ** Math.max(0, Number(metadata.deliveryCount ?? 1) - 1))) };
+  retry: (error, metadata) => {
+    const code = error && typeof error === "object" && "code" in error ? String((error as { code: unknown }).code) : "";
+    const delay = code === "provider_rate_limited" ? 60 : Math.min(300, 15 * (2 ** Math.max(0, Number(metadata.deliveryCount ?? 1) - 1)));
+    return { afterSeconds: delay };
   },
 });
