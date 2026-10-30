@@ -141,12 +141,18 @@ export async function generateCreativeJson(prompt: string): Promise<TextGenerati
   const failures: string[] = [];
   let attempted = 0;
   let quotaBlocked = 0;
+  let minuteBlocked = 0;
   let providerRateLimited = false;
   for (const id of configuredOrder) {
     const config = configFor(id);
     if (!config) continue;
-    const reserved = await reserveTextProviderRequest(config.id);
-    if (!reserved) { quotaBlocked += 1; failures.push(`${config.label}: free daily request budget reached`); continue; }
+    const reservation = await reserveTextProviderRequest(config.id);
+    if (!reservation.ok) {
+      if (reservation.reason === "minute_limit") minuteBlocked += 1;
+      else quotaBlocked += 1;
+      failures.push(`${config.label}: ${reservation.reason.replace("_", " ")} reached`);
+      continue;
+    }
     attempted += 1;
     try {
       const text = await generateWithProvider(config, prompt, AbortSignal.timeout(45000));
@@ -163,11 +169,14 @@ export async function generateCreativeJson(prompt: string): Promise<TextGenerati
       if (status && !retryable(status)) break;
     }
   }
+  if (attempted === 0 && minuteBlocked > 0) {
+    throw Object.assign(new Error("Free-provider per-minute request limit reached. The job will retry shortly."), { status: 429, code: "provider_rate_limited" });
+  }
   if (attempted === 0 && quotaBlocked > 0) {
     throw Object.assign(new Error("Free-tier daily provider request budget reached. Try again after the daily reset."), { status: 429, code: "free_daily_quota" });
   }
   if (providerRateLimited) {
-    throw Object.assign(new Error("Configured free providers are rate-limited. Try again after the provider quota resets."), { status: 429, code: "provider_rate_limited" });
+    throw Object.assign(new Error("Configured free providers are rate-limited or their daily quota is exhausted."), { status: 429, code: "free_daily_quota" });
   }
   throw Object.assign(new Error(`All configured text AI providers failed. ${failures.join(" | ").slice(0, 900)}`), { status: 502, code: "all_providers_failed" });
 }
