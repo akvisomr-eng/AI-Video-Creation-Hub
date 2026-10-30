@@ -64,7 +64,7 @@ export default function ProviderSettingsPage() {
 
       <section style={{ border: "1px solid #30343e", background: "#151820", borderRadius: 14, padding: 20, marginBottom: 16 }}>
         <h2 style={{ fontSize: 16, margin: "0 0 12px" }}>Media providers</h2>
-        {[["Image generation", data?.image], ["Video generation", data?.video], ["Text-to-speech", data?.speech]].map(([label, item]) => <div key={String(label)} style={{ borderTop: "1px solid #30343e", padding: "12px 0" }}><b>{String(label)}</b><div style={{ color: "#f0b6a8", fontSize: 12, marginTop: 4 }}>Adapter pending · {item?.configured ? "key present" : "not configured"}</div><p style={{ color: "#a1a1aa", fontSize: 12, margin: "5px 0 0" }}>{item?.note}</p></div>)}
+        {[{ label: "Image generation", item: data?.image }, { label: "Video generation", item: data?.video }, { label: "Text-to-speech", item: data?.speech }].map(({ label, item }) => <div key={label} style={{ borderTop: "1px solid #30343e", padding: "12px 0" }}><b>{label}</b><div style={{ color: "#f0b6a8", fontSize: 12, marginTop: 4 }}>Adapter pending · {item?.configured ? "key present" : "not configured"}</div><p style={{ color: "#a1a1aa", fontSize: 12, margin: "5px 0 0" }}>{item?.note}</p></div>)}
       </section>
 
       <section style={{ color: "#a1a1aa", fontSize: 12, lineHeight: 1.7 }}>
