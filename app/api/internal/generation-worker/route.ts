@@ -100,7 +100,7 @@ export async function POST(request: Request) {
       const maxAttempts = Number(job.max_attempts);
       const retry = attempt < maxAttempts;
       const delaySeconds = Math.min(300, 15 * (2 ** Math.max(0, attempt - 1)));
-      const internalMessage = error instanceof Error ? error.message.slice(0, 700) : "Unknown generation failure.";
+      const internalMessage = retry ? "Temporary provider failure; retry has been scheduled." : "Generation failed after the configured retry limit. Check provider configuration.";
       await sql`
         UPDATE generation_jobs
         SET status = ${retry ? "queued" : "failed"},
