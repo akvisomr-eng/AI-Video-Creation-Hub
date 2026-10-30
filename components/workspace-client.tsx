@@ -73,6 +73,7 @@ export default function WorkspaceClient() {
       <a className="nav-item" href="/video-studio"><span>▶</span> Image to video</a>
       <a className="nav-item" href="/retouch"><span>▧</span> Photo retouch <small>NEW</small></a>
       <a className="nav-item" href="#projects"><span>▤</span> Media library</a>
+      <a className="nav-item" href="/studio/jobs"><span>◷</span> Generation history</a>
       <div className="side-label second">MANAGE</div>
       <a className="nav-item" href="#usage"><span>◷</span> Usage & credits</a>
       <a className="nav-item" href="#settings"><span>⚙</span> Settings</a>
