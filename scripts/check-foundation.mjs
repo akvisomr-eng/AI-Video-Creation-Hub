@@ -10,7 +10,8 @@ const generationJobsRoute = await readFile(new URL("../app/api/generation-jobs/r
 const generationJobsPage = await readFile(new URL("../app/studio/jobs/page.tsx", import.meta.url), "utf8");
 const projectWorkspace = await readFile(new URL("../components/project-workspace.tsx", import.meta.url), "utf8");
 const queueRoute = await readFile(new URL("../app/api/generation-jobs/queue/route.ts", import.meta.url), "utf8");
-const workerRoute = await readFile(new URL("../app/api/internal/generation-worker/route.ts", import.meta.url), "utf8");
+const queueConsumer = await readFile(new URL("../app/api/queues/generation-jobs/route.ts", import.meta.url), "utf8");
+const vercelConfig = JSON.parse(await readFile(new URL("../vercel.json", import.meta.url), "utf8"));
 const queueMigration = await readFile(new URL("../database/migrations/20261030_async_generation_queue.sql", import.meta.url), "utf8");
 
 assert.equal(packageJson.private, true, "The application should remain private to its owner.");
