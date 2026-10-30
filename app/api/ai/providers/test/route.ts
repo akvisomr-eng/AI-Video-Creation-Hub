@@ -43,7 +43,8 @@ export async function POST() {
         WHERE id = ${jobId}::uuid
       `;
       return NextResponse.json({ ok: true, provider: result.provider, model: result.model, latencyMs });
-    } catch {
+    } catch (error) {
+      const providerStatus = error && typeof error === "object" && "status" in error ? Number((error as { status: unknown }).status) : 0;
       await sql`
         UPDATE generation_jobs
         SET status = 'failed', progress = 0, error_code = 'provider_health_test_failed',
@@ -51,7 +52,7 @@ export async function POST() {
             completed_at = now(), updated_at = now()
         WHERE id = ${jobId}::uuid
       `;
-      return NextResponse.json({ error: "Provider connection test failed. Check the server-side key, model allowlist, and provider quota." }, { status: 502 });
+      return NextResponse.json({ error: providerStatus === 429 ? "The free-provider daily request budget has been reached. Try again after the daily reset." : "Provider connection test failed. Check the server-side key, model allowlist, and provider quota." }, { status: providerStatus === 429 ? 429 : 502 });
     }
   } catch {
     return NextResponse.json({ error: "Could not run the provider connection test." }, { status: 500 });
