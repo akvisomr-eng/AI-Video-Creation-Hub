@@ -10,7 +10,7 @@ type Context = { params: Promise<{ id: string; sceneId: string }> };
 
 async function authorize(projectId: string, sceneId: string) {
   const user = await requireSession();
-  if (!user) return { response: NextResponse.json({ error: "Sign in is required." }, { status: 401 }) };
+  if (!user) return { ok: false as const, response: NextResponse.json({ error: "Sign in is required." }, { status: 401 }) };
   const appUserId = await getOrCreateAppUser(user);
   const sql = getDb();
   const rows = await sql`
@@ -19,15 +19,15 @@ async function authorize(projectId: string, sceneId: string) {
     INNER JOIN creative_projects p ON p.id = s.project_id
     WHERE s.id = ${sceneId}::uuid AND s.project_id = ${projectId}::uuid AND p.user_id = ${appUserId}
   `;
-  if (!rows.length) return { response: NextResponse.json({ error: "Scene not found." }, { status: 404 }) };
-  return { sql, scene: rows[0] };
+  if (!rows.length) return { ok: false as const, response: NextResponse.json({ error: "Scene not found." }, { status: 404 }) };
+  return { ok: true as const, sql, scene: rows[0] };
 }
 
 export async function PATCH(request: Request, context: Context) {
   try {
     const { id, sceneId } = await context.params;
     const auth = await authorize(id, sceneId);
-    if (auth.response) return auth.response;
+    if (!auth.ok) return auth.response;
     const body: unknown = await request.json();
     if (!body || typeof body !== "object") return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
     const input = body as Record<string, unknown>;
