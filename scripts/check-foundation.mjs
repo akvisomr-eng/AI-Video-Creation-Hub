@@ -14,6 +14,8 @@ const queueConsumer = await readFile(new URL("../app/api/queues/generation-jobs/
 const queueClient = await readFile(new URL("../lib/queue.ts", import.meta.url), "utf8");
 const vercelConfig = JSON.parse(await readFile(new URL("../vercel.json", import.meta.url), "utf8"));
 const queueMigration = await readFile(new URL("../database/migrations/20261030_async_generation_queue.sql", import.meta.url), "utf8");
+const providerTestRoute = await readFile(new URL("../app/api/ai/providers/test/route.ts", import.meta.url), "utf8");
+const providerPage = await readFile(new URL("../app/studio/providers/page.tsx", import.meta.url), "utf8");
 
 assert.equal(packageJson.private, true, "The application should remain private to its owner.");
 assert.ok(packageJson.dependencies.next, "Next.js must be installed.");
@@ -51,4 +53,7 @@ assert.match(queueMigration, /ADD COLUMN IF NOT EXISTS/, "Queue migration must b
 assert.equal((generationJobsRoute.match(/parameters->'result' AS result/g) ?? []).length, 2, "Both generation history query paths must return completed JSON output.");
 assert.match(projectWorkspace, /\/api\/generation-jobs\/queue/, "Project workspace must expose the async queue action.");
 assert.match(projectWorkspace, /Queue async text draft/, "Async queue action must be explicitly labeled as text-only.");
+assert.match(providerTestRoute, /requireSession\(\)/, "Provider health tests must require an authenticated user.");
+assert.match(providerTestRoute, /provider_health_test/, "Provider health tests must be recorded for audit and rate limiting.");
+assert.match(providerPage, /Run text-provider test/, "Provider readiness UI must expose an explicit live test action.");
 console.log("Foundation contract checks passed.");
