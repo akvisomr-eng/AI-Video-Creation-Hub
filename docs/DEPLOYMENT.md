@@ -36,12 +36,12 @@ Preview environment variables are scoped to `feat/photo-retouch-studio` and `fea
 ## Asynchronous text-generation queue (Preview only until configured)
 
 - Apply `database/migrations/20261030_async_generation_queue.sql` to the Neon **development** branch. The migration is additive and re-runnable; do not apply it to Production before a separately reviewed rollout.
-- Set `GENERATION_WORKER_SECRET` as an encrypted server-side secret (32+ random characters) on the Preview deployment. Never expose it with a `NEXT_PUBLIC_` prefix.
 - The signed-in endpoint `POST /api/generation-jobs/queue` accepts `projectId`, `prompt`, and an optional `idempotencyKey`; it enforces project ownership and a limit of 10 queued text jobs per user per day.
 - Set `GENERATION_QUEUE_ENABLED=true` only after a free-tier provider, quota, and billing behavior are verified. It defaults to disabled.
 - A scheduler must call `POST /api/internal/generation-worker` with `Authorization: Bearer <GENERATION_WORKER_SECRET>`. The included GitHub Actions schedule runs every five minutes when repository secrets `GENERATION_WORKER_URL` and `GENERATION_WORKER_SECRET` are present. Set `GENERATION_WORKER_URL` to the Preview worker endpoint. Each call claims at most one job. The worker uses an atomic `FOR UPDATE SKIP LOCKED` claim, three attempts, exponential retry delay, and stale-lease recovery.
 - Worker output is text/JSON only. This queue does **not** generate images, video, audio, or MP4. Provider cost remains unknown unless the provider supplies verifiable usage pricing; the app does not fabricate a cost.
-- The scheduled workflow stays idle until all three GitHub repository secrets are configured. Confirm GitHub Actions usage limits and operational budget before activating it.
+- Vercel Queues is currently in public beta and available on all plans. Confirm availability in the target Vercel project before enabling the feature; its service and function usage remain subject to Vercel plan limits.
+
 
 ## Acceptance checklist
 
