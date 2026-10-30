@@ -29,14 +29,14 @@ export async function POST(request: Request) {
     const owned = await sql`SELECT id FROM creative_projects WHERE id = ${projectId}::uuid AND user_id = ${appUserId}`;
     if (!owned.length) return NextResponse.json({ error: "Project not found." }, { status: 404 });
 
-    const daily = await sql`SELECT count(*)::int AS count FROM generation_jobs WHERE user_id = ${appUserId} AND parameters->>'purpose' = 'async_text_generation' AND created_at >= date_trunc('day', now())`;
-    if (Number(daily[0]?.count ?? 0) >= 10) {
-      return NextResponse.json({ error: "Daily free-workspace queue limit reached (10 jobs). Try again tomorrow." }, { status: 429 });
-    }
-
     if (idempotencyKey) {
       const existing = await sql`SELECT id, status, created_at FROM generation_jobs WHERE user_id = ${appUserId} AND idempotency_key = ${idempotencyKey} LIMIT 1`;
       if (existing.length) return NextResponse.json({ job: existing[0], reused: true }, { status: 200 });
+    }
+
+    const daily = await sql`SELECT count(*)::int AS count FROM generation_jobs WHERE user_id = ${appUserId} AND parameters->>'purpose' = 'async_text_generation' AND created_at >= date_trunc('day', now())`;
+    if (Number(daily[0]?.count ?? 0) >= 10) {
+      return NextResponse.json({ error: "Daily free-workspace queue limit reached (10 jobs). Try again tomorrow." }, { status: 429 });
     }
 
     const rows = await sql`
