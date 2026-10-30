@@ -23,9 +23,9 @@ export async function POST() {
     }
 
     const rows = await sql`
-      INSERT INTO generation_jobs (user_id, job_type, provider, model, status, progress, prompt, parameters, max_attempts)
+      INSERT INTO generation_jobs (user_id, job_type, provider, model, status, progress, prompt, parameters, max_attempts, started_at)
       VALUES (${userId}, 'campaign', 'pending', 'pending', 'processing', 10,
-        'Provider connection verification', ${JSON.stringify({ purpose: "provider_health_test" })}::jsonb, 1)
+        'Provider connection verification', ${JSON.stringify({ purpose: "provider_health_test" })}::jsonb, 1, now())
       RETURNING id
     `;
     const jobId = String(rows[0].id);
