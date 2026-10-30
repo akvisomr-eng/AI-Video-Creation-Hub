@@ -37,11 +37,12 @@ assert.match(generationJobsPage, /Try again/, "Generation history must provide a
 assert.match(queueRoute, /requireSession\(\)/, "Only signed-in users may enqueue generation jobs.");
 assert.match(queueRoute, /WHERE id = \$\{projectId\}::uuid AND user_id = \$\{appUserId\}/, "Queue creation must enforce project ownership.");
 assert.match(queueRoute, /idempotencyKey/, "Queue creation must support idempotent submissions.");
-assert.match(workerRoute, /timingSafeEqual/, "Worker secret comparison must be timing-safe.");
-assert.match(workerRoute, /FOR UPDATE SKIP LOCKED/, "Workers must claim jobs without double-processing.");
-assert.match(workerRoute, /worker_token = \$\{token\}/, "Worker completion must be fenced by its lease token.");
-assert.match(workerRoute, /attempt_count < max_attempts/, "Worker must enforce bounded retries.");
-assert.match(workerRoute, /worker_lease_expired/, "Worker must recover expired processing leases.");
+assert.match(queueConsumer, /handleCallback/, "Generation jobs must be processed by the managed Vercel queue consumer.");
+assert.match(queueConsumer, /visibilityTimeoutSeconds: 300/, "Queue consumer must use an explicit visibility lease.");
+assert.match(queueConsumer, /worker_token = \\$\\{token\\}/, "Worker completion must be fenced by its lease token.");
+assert.match(queueConsumer, /deliveryCount/, "Queue consumer must account for redelivery attempts.");
+assert.match(queueRoute, /send\\("generation-jobs"/, "Queue endpoint must publish to the managed generation topic.");
+assert.equal(vercelConfig.functions["app/api/queues/generation-jobs/route.ts"].experimentalTriggers[0].topic, "generation-jobs", "Vercel must route the generation topic to its consumer.");
 assert.match(queueMigration, /ADD COLUMN IF NOT EXISTS/, "Queue migration must be additive and repeatable.");
 assert.match(generationJobsRoute, /parameters->'result' AS result/, "Owner-scoped job history must return completed JSON output.");
 assert.match(projectWorkspace, /\/api\/generation-jobs\/queue/, "Project workspace must expose the async queue action.");
