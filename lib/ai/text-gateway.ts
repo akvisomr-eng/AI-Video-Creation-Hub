@@ -141,6 +141,7 @@ export async function generateCreativeJson(prompt: string): Promise<TextGenerati
   const failures: string[] = [];
   let attempted = 0;
   let quotaBlocked = 0;
+  let providerRateLimited = false;
   for (const id of configuredOrder) {
     const config = configFor(id);
     if (!config) continue;
@@ -154,6 +155,7 @@ export async function generateCreativeJson(prompt: string): Promise<TextGenerati
       const status = typeof error === "object" && error !== null && "status" in error ? Number((error as { status: unknown }).status) : 0;
       const message = error instanceof Error ? error.message : "Unknown provider error";
       failures.push(`${config.label}: ${message.slice(0, 220)}`);
+      if (status === 429) providerRateLimited = true;
       // Try another provider only when the failure is plausibly transient.
       // Authentication, permission, invalid-request, and missing-model errors are
       // configuration/actionable failures; retrying every provider only adds latency
@@ -163,6 +165,9 @@ export async function generateCreativeJson(prompt: string): Promise<TextGenerati
   }
   if (attempted === 0 && quotaBlocked > 0) {
     throw Object.assign(new Error("Free-tier daily provider request budget reached. Try again after the daily reset."), { status: 429, code: "free_daily_quota" });
+  }
+  if (providerRateLimited) {
+    throw Object.assign(new Error("Configured free providers are rate-limited. Try again after the provider quota resets."), { status: 429, code: "provider_rate_limited" });
   }
   throw Object.assign(new Error(`All configured text AI providers failed. ${failures.join(" | ").slice(0, 900)}`), { status: 502, code: "all_providers_failed" });
 }
