@@ -1,3 +1,5 @@
+import { reserveTextProviderRequest } from "@/lib/ai/provider-usage";
+
 export type TextProviderId = "gemini" | "groq" | "cerebras" | "openrouter";
 
 export type TextGenerationResult = {
@@ -137,9 +139,14 @@ export async function generateCreativeJson(prompt: string): Promise<TextGenerati
     throw Object.assign(new Error("No text AI provider is configured. Add at least one server-side API key: GEMINI_API_KEY, GROQ_API_KEY, CEREBRAS_API_KEY, or OPENROUTER_API_KEY."), { status: 503, code: "no_provider" });
   }
   const failures: string[] = [];
+  let attempted = 0;
+  let quotaBlocked = 0;
   for (const id of configuredOrder) {
     const config = configFor(id);
     if (!config) continue;
+    const reserved = await reserveTextProviderRequest(config.id);
+    if (!reserved) { quotaBlocked += 1; failures.push(`${config.label}: free daily request budget reached`); continue; }
+    attempted += 1;
     try {
       const text = await generateWithProvider(config, prompt, AbortSignal.timeout(45000));
       return { text, provider: config.id, model: config.model };
@@ -153,6 +160,9 @@ export async function generateCreativeJson(prompt: string): Promise<TextGenerati
       // and can obscure the real issue.
       if (status && !retryable(status)) break;
     }
+  }
+  if (attempted === 0 && quotaBlocked > 0) {
+    throw Object.assign(new Error("Free-tier daily provider request budget reached. Try again after the daily reset."), { status: 429, code: "free_daily_quota" });
   }
   throw Object.assign(new Error(`All configured text AI providers failed. ${failures.join(" | ").slice(0, 900)}`), { status: 502, code: "all_providers_failed" });
 }
