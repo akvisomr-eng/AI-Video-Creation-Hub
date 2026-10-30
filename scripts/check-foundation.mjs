@@ -41,5 +41,5 @@ assert.match(workerRoute, /worker_token = \$\{token\}/, "Worker completion must 
 assert.match(workerRoute, /attempt_count < max_attempts/, "Worker must enforce bounded retries.");
 assert.match(workerRoute, /worker_lease_expired/, "Worker must recover expired processing leases.");
 assert.match(queueMigration, /ADD COLUMN IF NOT EXISTS/, "Queue migration must be additive and repeatable.");
-assert.match(jobsNew, /parameters->'result' AS result/, "Owner-scoped job history must return completed JSON output.");
+assert.match(generationJobsRoute, /parameters->'result' AS result/, "Owner-scoped job history must return completed JSON output.");
 console.log("Foundation contract checks passed.");
