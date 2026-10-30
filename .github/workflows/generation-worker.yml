@@ -21,11 +21,13 @@ jobs:
         env:
           WORKER_URL: ${{ secrets.GENERATION_WORKER_URL }}
           WORKER_SECRET: ${{ secrets.GENERATION_WORKER_SECRET }}
+          VERCEL_BYPASS: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
         if: ${{ env.WORKER_URL != '' && env.WORKER_SECRET != '' }}
         run: |
           curl --fail-with-body --silent --show-error --max-time 75 \
             --request POST \
             --header "Authorization: Bearer ${WORKER_SECRET}" \
+            --header "x-vercel-protection-bypass: ${VERCEL_BYPASS}" \
             "${WORKER_URL}"
       - name: Explain missing scheduler secrets
         env:
