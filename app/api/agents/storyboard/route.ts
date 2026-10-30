@@ -120,7 +120,7 @@ export async function POST(request: Request) {
       // Keep provider diagnostics in server-side job records only; never echo raw provider
       // messages because they may contain upstream response bodies or implementation details.
       const internalReason = providerMessage.slice(0, 900);
-      await sql`UPDATE generation_jobs SET status = 'failed', error_code = ${providerStatus === 503 ? "no_provider" : "provider_chain_failed"}, error_message = ${internalReason}, completed_at = now(), updated_at = now() WHERE id = ${jobId}::uuid`;
+      await sql`UPDATE generation_jobs SET status = 'failed', error_code = ${providerStatus === 503 ? "no_provider" : providerStatus === 429 ? "free_daily_quota" : "provider_chain_failed"}, error_message = ${internalReason}, completed_at = now(), updated_at = now() WHERE id = ${jobId}::uuid`;
       await sql`UPDATE agent_runs SET status = 'failed', error_message = ${internalReason}, completed_at = now() WHERE id = ${agentRunId}::uuid`;
       return NextResponse.json({
         error: providerStatus === 503
