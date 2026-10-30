@@ -10,6 +10,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-
 
 export async function POST(request: Request) {
   try {
+    if (process.env.GENERATION_QUEUE_ENABLED !== "true") return NextResponse.json({ error: "Asynchronous generation is not enabled for this environment yet." }, { status: 503 });
     const user = await requireSession();
     if (!user) return NextResponse.json({ error: "Sign in is required." }, { status: 401 });
 
@@ -18,7 +19,7 @@ export async function POST(request: Request) {
     const input = body as Record<string, unknown>;
     const prompt = typeof input.prompt === "string" ? input.prompt.trim() : "";
     const projectId = typeof input.projectId === "string" ? input.projectId : "";
-    const idempotencyKey = typeof input.idempotencyKey === "string" ? input.idempotencyKey.trim().slice(0, 120) : null;
+    const idempotencyKey = typeof input.idempotencyKey === "string" ? (input.idempotencyKey.trim().slice(0, 120) || null) : null;
 
     if (!UUID.test(projectId)) return NextResponse.json({ error: "A valid project ID is required." }, { status: 400 });
     if (!prompt || prompt.length > 2000) return NextResponse.json({ error: "Prompt must contain 1–2,000 characters." }, { status: 400 });
