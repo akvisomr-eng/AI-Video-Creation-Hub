@@ -1,0 +1,32 @@
+name: Generation queue worker
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: generation-queue-worker
+  cancel-in-progress: false
+
+jobs:
+  process-one-job:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Trigger one queued generation job
+        env:
+          WORKER_URL: ${{ secrets.GENERATION_WORKER_URL }}
+          WORKER_SECRET: ${{ secrets.GENERATION_WORKER_SECRET }}
+        if: ${{ env.WORKER_URL != '' && env.WORKER_SECRET != '' }}
+        run: |
+          curl --fail-with-body --silent --show-error --max-time 75 \
+            --request POST \
+            --header "Authorization: Bearer ${WORKER_SECRET}" \
+            "${WORKER_URL}"
+      - name: Explain missing scheduler secrets
+        if: ${{ secrets.GENERATION_WORKER_URL == '' || secrets.GENERATION_WORKER_SECRET == '' }}
+        run: echo "Worker is idle. Configure GENERATION_WORKER_URL and GENERATION_WORKER_SECRET repository secrets to activate scheduled processing."
