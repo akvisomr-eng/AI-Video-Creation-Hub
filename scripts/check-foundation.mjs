@@ -39,9 +39,9 @@ assert.match(queueRoute, /WHERE id = \$\{projectId\}::uuid AND user_id = \$\{app
 assert.match(queueRoute, /idempotencyKey/, "Queue creation must support idempotent submissions.");
 assert.match(queueConsumer, /handleCallback/, "Generation jobs must be processed by the managed Vercel queue consumer.");
 assert.match(queueConsumer, /visibilityTimeoutSeconds: 300/, "Queue consumer must use an explicit visibility lease.");
-assert.match(queueConsumer, /worker_token = \\$\\{token\\}/, "Worker completion must be fenced by its lease token.");
+assert.ok(queueConsumer.includes("worker_token = ${token}"), "Worker completion must be fenced by its lease token.");
 assert.match(queueConsumer, /deliveryCount/, "Queue consumer must account for redelivery attempts.");
-assert.match(queueRoute, /send\\("generation-jobs"/, "Queue endpoint must publish to the managed generation topic.");
+assert.ok(queueRoute.includes('send("generation-jobs"'), "Queue endpoint must publish to the managed generation topic.");
 assert.equal(vercelConfig.functions["app/api/queues/generation-jobs/route.ts"].experimentalTriggers[0].topic, "generation-jobs", "Vercel must route the generation topic to its consumer.");
 assert.match(queueMigration, /ADD COLUMN IF NOT EXISTS/, "Queue migration must be additive and repeatable.");
 assert.match(generationJobsRoute, /parameters->'result' AS result/, "Owner-scoped job history must return completed JSON output.");
