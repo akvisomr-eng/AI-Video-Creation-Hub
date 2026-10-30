@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation";
+import { StoryboardHome } from "@/components/storyboard-studio";
 
 export default function StoryboardPage() {
-  redirect("/studio/text-to-video");
+  return <StoryboardHome />;
 }
