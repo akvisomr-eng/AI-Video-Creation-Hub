@@ -63,7 +63,7 @@ export async function POST(request: Request) {
 
     const job = rows[0];
     try {
-      await send("generation-jobs", { jobId: String(job.id) }, { idempotencyKey: String(job.id) });
+      await send("generation-jobs", { jobId: String(job.id) }, { idempotencyKey: String(job.id), retentionSeconds: 604800 });
     } catch {
       await sql`
         UPDATE generation_jobs
