@@ -69,13 +69,15 @@ export const POST = handleCallback(async (message: QueueMessage, metadata) => {
     if (!saved.length) throw new Error("Generation job lease was lost before completion.");
   } catch (error) {
     const deliveryCount = Number(metadata.deliveryCount ?? 1);
-    const finalAttempt = deliveryCount >= 3;
+    const providerStatus = error && typeof error === "object" && "status" in error ? Number((error as { status: unknown }).status) : 0;
+    const quotaReached = providerStatus === 429;
+    const finalAttempt = quotaReached || deliveryCount >= 3;
     await sql`
       UPDATE generation_jobs
       SET status = ${finalAttempt ? "failed" : "queued"},
           progress = 0,
-          error_code = 'worker_generation_failed',
-          error_message = ${finalAttempt ? "Generation failed after the managed queue retry limit." : "Temporary provider failure; the managed queue will retry."},
+          error_code = ${quotaReached ? "free_daily_quota" : "worker_generation_failed"},
+          error_message = ${quotaReached ? "The free-provider daily request budget has been reached. Try again after the daily reset." : finalAttempt ? "Generation failed after the managed queue retry limit." : "Temporary provider failure; the managed queue will retry."},
           completed_at = ${finalAttempt ? new Date().toISOString() : null}::timestamptz,
           locked_at = NULL,
           worker_token = NULL,
