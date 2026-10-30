@@ -8,6 +8,16 @@ const sceneRoute = await readFile(new URL("../app/api/projects/[id]/scenes/route
 const readme = await readFile(new URL("../README.md", import.meta.url), "utf8");
 const generationJobsRoute = await readFile(new URL("../app/api/generation-jobs/route.ts", import.meta.url), "utf8");
 const generationJobsPage = await readFile(new URL("../app/studio/jobs/page.tsx", import.meta.url), "utf8");
+const projectWorkspace = await readFile(new URL("../components/project-workspace.tsx", import.meta.url), "utf8");
+const queueRoute = await readFile(new URL("../app/api/generation-jobs/queue/route.ts", import.meta.url), "utf8");
+const queueConsumer = await readFile(new URL("../app/api/queues/generation-jobs/route.ts", import.meta.url), "utf8");
+const queueClient = await readFile(new URL("../lib/queue.ts", import.meta.url), "utf8");
+const vercelConfig = JSON.parse(await readFile(new URL("../vercel.json", import.meta.url), "utf8"));
+const queueMigration = await readFile(new URL("../database/migrations/20261030_async_generation_queue.sql", import.meta.url), "utf8");
+const providerTestRoute = await readFile(new URL("../app/api/ai/providers/test/route.ts", import.meta.url), "utf8");
+const providerPage = await readFile(new URL("../app/studio/providers/page.tsx", import.meta.url), "utf8");
+const providerUsage = await readFile(new URL("../lib/ai/provider-usage.ts", import.meta.url), "utf8");
+const textGateway = await readFile(new URL("../lib/ai/text-gateway.ts", import.meta.url), "utf8");
 
 assert.equal(packageJson.private, true, "The application should remain private to its owner.");
 assert.ok(packageJson.dependencies.next, "Next.js must be installed.");
@@ -29,4 +39,28 @@ assert.match(generationJobsPage, /\/api\/generation-jobs\?limit=100/, "Generatio
 assert.match(generationJobsPage, /No generation jobs yet/, "Generation history must provide an empty state.");
 assert.match(generationJobsPage, /Try again/, "Generation history must provide an error recovery action.");
 
+assert.match(queueRoute, /requireSession\(\)/, "Only signed-in users may enqueue generation jobs.");
+assert.match(queueRoute, /WHERE id = \$\{projectId\}::uuid AND user_id = \$\{appUserId\}/, "Queue creation must enforce project ownership.");
+assert.match(queueRoute, /idempotencyKey/, "Queue creation must support idempotent submissions.");
+assert.match(providerUsage, /FREE_TEXT_PROVIDER_DAILY_LIMIT = 40/, "Free-tier provider usage must have a daily cap.");
+assert.match(providerUsage, /FREE_TEXT_PROVIDER_MINUTE_LIMIT = 15/, "Free-tier provider usage must have a per-minute cap.");
+assert.match(queueClient, /new QueueClient\(\{ region: "iad1" \}\)/, "Queue producer and consumer must use the deployment region.");
+assert.match(queueConsumer, /handleCallback/, "Generation jobs must be processed by the managed Vercel queue consumer.");
+assert.match(queueConsumer, /visibilityTimeoutSeconds: 300/, "Queue consumer must use an explicit visibility lease.");
+assert.ok(queueConsumer.includes("worker_token = ${token}"), "Worker completion must be fenced by its lease token.");
+assert.match(queueConsumer, /deliveryCount/, "Queue consumer must account for redelivery attempts.");
+assert.match(queueConsumer, /provider_rate_limited/, "Minute throttles must retry without consuming a generation attempt.");
+assert.match(queueClient, /region: "iad1"/, "Queue client must be pinned to the deployed function region.");
+assert.ok(queueRoute.includes('send("generation-jobs"'), "Queue endpoint must publish to the managed generation topic.");
+assert.equal(vercelConfig.functions["app/api/queues/generation-jobs/route.ts"].experimentalTriggers[0].topic, "generation-jobs", "Vercel must route the generation topic to its consumer.");
+assert.match(queueMigration, /ADD COLUMN IF NOT EXISTS/, "Queue migration must be additive and repeatable.");
+assert.equal((generationJobsRoute.match(/parameters->'result' AS result/g) ?? []).length, 2, "Both generation history query paths must return completed JSON output.");
+assert.match(projectWorkspace, /\/api\/generation-jobs\/queue/, "Project workspace must expose the async queue action.");
+assert.match(projectWorkspace, /Queue async text draft/, "Async queue action must be explicitly labeled as text-only.");
+assert.match(providerTestRoute, /requireSession\(\)/, "Provider health tests must require an authenticated user.");
+assert.match(providerTestRoute, /provider_health_test/, "Provider health tests must be recorded for audit and rate limiting.");
+assert.match(providerPage, /Run text-provider test/, "Provider readiness UI must expose an explicit live test action.");
+assert.match(providerUsage, /FREE_TEXT_PROVIDER_DAILY_LIMIT = 40/, "Text provider usage must enforce the shared free-tier request budget.");
+assert.match(textGateway, /reserveTextProviderRequest\(config.id\)/, "Every provider attempt must reserve from the shared daily budget.");
+assert.match(textGateway, /DEFAULT_ORDER: TextProviderId\[\] = \["openrouter"\]/, "Only the free OpenRouter route is enabled by default.");
 console.log("Foundation contract checks passed.");

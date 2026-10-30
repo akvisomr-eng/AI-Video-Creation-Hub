@@ -1,0 +1,12 @@
+{
+  "functions": {
+    "app/api/queues/generation-jobs/route.ts": {
+      "experimentalTriggers": [
+        {
+          "type": "queue/v2beta",
+          "topic": "generation-jobs"
+        }
+      ]
+    }
+  }
+}

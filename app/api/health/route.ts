@@ -18,6 +18,7 @@ export async function GET() {
     imageProvider: process.env.IMAGE_PROVIDER_API_KEY ? "configured" : "not_configured",
     videoProvider: process.env.VIDEO_PROVIDER_API_KEY ? "configured" : "not_configured",
     ttsProvider: process.env.TTS_PROVIDER_API_KEY ? "configured" : "not_configured",
+    generationQueue: process.env.GENERATION_QUEUE_ENABLED === "true" ? "enabled" : "disabled",
     objectStorage: process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY && process.env.AWS_ENDPOINT_URL_S3 && process.env.AWS_REGION ? "configured" : "not_configured",
   };
 

@@ -13,7 +13,7 @@ This runbook describes the current isolated Vercel project and the remaining acc
 - Production branch: `br-purple-fire-b3mbm4jo`
 - Development branch: `br-icy-wave-b33vb56m`
 - Private media bucket: `creator-media`
-- Vercel SSO protection is configured for Preview deployments; production deployment URLs are public. **Production environment variables have not been configured**, so the production app must be considered a visual/build deployment only until the health check and authentication are verified.
+- Vercel SSO protection is configured for Preview deployments; production deployment URLs are public. Production has encrypted `DATABASE_URL`, `NEON_AUTH_BASE_URL`, and `NEON_AUTH_COOKIE_SECRET`, plus `APP_PUBLIC_URL` and `AI_MULTI_AGENT_ENABLED=false`. Values were not decrypted or inspected. Database target, health, and authentication still require a runtime verification before claiming Production is operational.
 
 ## Environment variables
 
@@ -21,15 +21,28 @@ Use Vercel's encrypted/sensitive type for secrets. Never commit real values to G
 
 | Variable | Preview | Production |
 | --- | --- | --- |
-| `DATABASE_URL` | Configured for isolated Neon development branch on the feature preview branches listed below | Not configured |
-| `NEON_AUTH_BASE_URL` | Configured for Neon development branch | Not configured |
-| `NEON_AUTH_COOKIE_SECRET` | Unique per feature preview branch | Not configured |
-| `APP_PUBLIC_URL` | Stable preview alias per feature branch | Not configured |
+| `DATABASE_URL` | Configured only on the older feature-preview branches listed below | Configured (target not runtime-verified) |
+| `NEON_AUTH_BASE_URL` | Configured only on the older feature-preview branches listed below | Configured (target not runtime-verified) |
+| `NEON_AUTH_COOKIE_SECRET` | Unique per older feature preview branch | Configured (value not inspected) |
+| `APP_PUBLIC_URL` | Stable preview alias on older feature branches only | Configured |
 | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_ENDPOINT_URL_S3`, `AWS_REGION`, `NEON_STORAGE_BUCKET` | Not configured; media upload needs setup and verification | Not configured |
 | `GEMINI_API_KEY`, `GROQ_API_KEY`, `CEREBRAS_API_KEY`, `OPENROUTER_API_KEY` | Optional; none verified as operational | Not configured/verified |
-| `AI_MULTI_AGENT_ENABLED` | `false` | Not configured |
+| `AI_MULTI_AGENT_ENABLED` | `false` on older feature preview branches | `false` |
+| `AI_TEXT_PROVIDER_ORDER` | Code default is `openrouter`; no provider key configured | Code default is `openrouter`; no provider key configured |
+| `GENERATION_QUEUE_ENABLED` | Defaults to `false`; no override configured | Defaults to `false`; no override configured |
 
-Preview environment variables are scoped to `feat/photo-retouch-studio` and `feat/photo-retouch-studio-rebased`, using only the Neon development branch. Do not copy development credentials into Production.
+Preview environment variables are currently scoped to `feat/photo-retouch-studio`, `feat/photo-retouch-studio-rebased`, and `fix/storyboard-error-redaction-2026-10-27`. The current async-queue branch has no branch-scoped database/auth credentials, so its build preview is not yet an authenticated runtime acceptance environment. Do not copy development credentials into Production.
+
+## Asynchronous text-generation queue (Preview only until configured)
+
+- Apply `database/migrations/20261030_async_generation_queue.sql` to the Neon **development** branch. The migration is additive and re-runnable; do not apply it to Production before a separately reviewed rollout.
+- The signed-in endpoint `POST /api/generation-jobs/queue` accepts `projectId`, `prompt`, and an optional `idempotencyKey`; it enforces project ownership, 10 jobs per user/day. All text-provider requests share atomic caps of 40 requests/day and 15 requests/minute per provider (safety buffers below OpenRouter Free's 50/day and 20/minute limits). Rate-limited jobs wait and retry without consuming a generation attempt.
+- `AI_TEXT_PROVIDER_ORDER` is an allowlist as well as an order. By default only OpenRouter's `openrouter/free` route is selected; Gemini, Groq, and Cerebras are not automatically used as fallbacks. Add them explicitly only after reviewing the account's free/paid tier and billing behavior.
+- Set `GENERATION_QUEUE_ENABLED=true` only after a free-tier provider, quota, and billing behavior are verified. It defaults to disabled.
+- The application publishes messages to the managed Vercel Queues topic `generation-jobs`; the push consumer is registered in `vercel.json`. Vercel Queues handles durable delivery, visibility leases, and redelivery. The database remains the source of truth for per-user job status and results.
+- Worker output is text/JSON only. This queue does **not** generate images, video, audio, or MP4. Provider cost remains unknown unless the provider supplies verifiable usage pricing; the app does not fabricate a cost.
+- Vercel Queues is currently in public beta and available on all plans. Confirm availability in the target Vercel project before enabling the feature; its service and function usage remain subject to Vercel plan limits.
+
 
 ## Acceptance checklist
 

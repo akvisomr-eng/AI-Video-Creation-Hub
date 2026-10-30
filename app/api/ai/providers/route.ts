@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireSession } from "@/lib/auth/server";
 import { getConfiguredTextProviders } from "@/lib/ai/text-gateway";
+import { getTextProviderUsage } from "@/lib/ai/provider-usage";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -10,9 +11,11 @@ export async function GET() {
   if (!user) return NextResponse.json({ error: "Sign in is required." }, { status: 401 });
 
   const configured = getConfiguredTextProviders();
+  const usage = await Promise.all(configured.map(async (provider) => ({ ...provider, ...(await getTextProviderUsage(provider.id)) })));
   return NextResponse.json({
     mode: "multi-provider",
     text: configured,
+    usage,
     image: {
       configured: Boolean(process.env.IMAGE_PROVIDER_API_KEY),
       status: "adapter_pending",

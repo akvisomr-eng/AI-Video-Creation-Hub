@@ -117,17 +117,22 @@ export async function POST(request: Request) {
     } catch (providerError) {
       const providerMessage = providerError instanceof Error ? providerError.message : "All configured AI providers failed.";
       const providerStatus = providerError && typeof providerError === "object" && "status" in providerError ? Number((providerError as { status: unknown }).status) : 502;
+      const providerCode = providerError && typeof providerError === "object" && "code" in providerError ? String((providerError as { code: unknown }).code) : "";
       // Keep provider diagnostics in server-side job records only; never echo raw provider
       // messages because they may contain upstream response bodies or implementation details.
       const internalReason = providerMessage.slice(0, 900);
-      await sql`UPDATE generation_jobs SET status = 'failed', error_code = ${providerStatus === 503 ? "no_provider" : "provider_chain_failed"}, error_message = ${internalReason}, completed_at = now(), updated_at = now() WHERE id = ${jobId}::uuid`;
+      await sql`UPDATE generation_jobs SET status = 'failed', error_code = ${providerStatus === 503 ? "no_provider" : providerStatus === 429 ? providerCode === "provider_rate_limited" ? "provider_rate_limited" : "free_daily_quota" : "provider_chain_failed"}, error_message = ${internalReason}, completed_at = now(), updated_at = now() WHERE id = ${jobId}::uuid`;
       await sql`UPDATE agent_runs SET status = 'failed', error_message = ${internalReason}, completed_at = now() WHERE id = ${agentRunId}::uuid`;
       return NextResponse.json({
         error: providerStatus === 503
           ? "No AI provider is currently available. Check server configuration and try again."
-          : "AI storyboard generation failed because the configured providers could not complete the request.",
+          : providerStatus === 429 && providerCode === "provider_rate_limited"
+            ? "The free-provider per-minute limit has been reached. The request can be retried shortly."
+            : providerStatus === 429
+              ? "The free-provider daily request budget has been reached. Try again after the daily reset."
+            : "AI storyboard generation failed because the configured providers could not complete the request.",
         jobId,
-      }, { status: providerStatus === 503 ? 503 : 502 });
+      }, { status: providerStatus === 503 ? 503 : providerStatus === 429 ? 429 : 502 });
     }
     const modelText = generated.text;
     await sql`UPDATE generation_jobs SET provider = ${generated.provider}, model = ${generated.model}, updated_at = now() WHERE id = ${jobId}::uuid`;

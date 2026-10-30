@@ -1,3 +1,5 @@
+import { reserveTextProviderRequest } from "@/lib/ai/provider-usage";
+
 export type TextProviderId = "gemini" | "groq" | "cerebras" | "openrouter";
 
 export type TextGenerationResult = {
@@ -14,7 +16,9 @@ type ProviderConfig = {
   endpoint: string;
 };
 
-const DEFAULT_ORDER: TextProviderId[] = ["gemini", "groq", "cerebras", "openrouter"];
+const SUPPORTED_ORDER: TextProviderId[] = ["openrouter", "groq", "gemini", "cerebras"];
+// Free-tier-first default: OpenRouter routes to free models. Other providers are opt-in.
+const DEFAULT_ORDER: TextProviderId[] = ["openrouter"];
 
 function configFor(id: TextProviderId): ProviderConfig | null {
   if (id === "gemini") {
@@ -54,10 +58,11 @@ function configFor(id: TextProviderId): ProviderConfig | null {
 }
 
 export function getConfiguredTextProviders(): Array<{ id: TextProviderId; label: string; model: string }> {
-  const configuredOrder = (process.env.AI_TEXT_PROVIDER_ORDER || DEFAULT_ORDER.join(","))
-    .split(",").map((item) => item.trim().toLowerCase()).filter(Boolean) as TextProviderId[];
-  const order = [...new Set(configuredOrder.filter((id) => DEFAULT_ORDER.includes(id)))];
-  for (const id of DEFAULT_ORDER) if (!order.includes(id)) order.push(id);
+  const configured = process.env.AI_TEXT_PROVIDER_ORDER;
+  const requestedOrder = configured === undefined
+    ? DEFAULT_ORDER
+    : configured.split(",").map((item) => item.trim().toLowerCase()) as TextProviderId[];
+  const order = [...new Set(requestedOrder.filter((id) => SUPPORTED_ORDER.includes(id)))];
   return order.flatMap((id) => {
     const config = configFor(id);
     return config ? [{ id: config.id, label: config.label, model: config.model }] : [];
@@ -98,7 +103,7 @@ async function generateWithProvider(config: ProviderConfig, prompt: string, sign
     "Content-Type": "application/json",
   };
   if (config.id === "openrouter") {
-    headers["HTTP-Referer"] = process.env.APP_PUBLIC_URL || "https://ai-video-creation-hub.example";
+    if (process.env.APP_PUBLIC_URL) headers["HTTP-Referer"] = process.env.APP_PUBLIC_URL;
     headers["X-Title"] = "AI Video Creation Hub";
   }
   const response = await fetch(`${config.endpoint}/chat/completions`, {
@@ -134,9 +139,21 @@ export async function generateCreativeJson(prompt: string): Promise<TextGenerati
     throw Object.assign(new Error("No text AI provider is configured. Add at least one server-side API key: GEMINI_API_KEY, GROQ_API_KEY, CEREBRAS_API_KEY, or OPENROUTER_API_KEY."), { status: 503, code: "no_provider" });
   }
   const failures: string[] = [];
+  let attempted = 0;
+  let quotaBlocked = 0;
+  let minuteBlocked = 0;
+  let providerRateLimited = false;
   for (const id of configuredOrder) {
     const config = configFor(id);
     if (!config) continue;
+    const reservation = await reserveTextProviderRequest(config.id);
+    if (!reservation.ok) {
+      if (reservation.reason === "minute_limit") minuteBlocked += 1;
+      else quotaBlocked += 1;
+      failures.push(`${config.label}: ${reservation.reason.replace("_", " ")} reached`);
+      continue;
+    }
+    attempted += 1;
     try {
       const text = await generateWithProvider(config, prompt, AbortSignal.timeout(45000));
       return { text, provider: config.id, model: config.model };
@@ -144,12 +161,22 @@ export async function generateCreativeJson(prompt: string): Promise<TextGenerati
       const status = typeof error === "object" && error !== null && "status" in error ? Number((error as { status: unknown }).status) : 0;
       const message = error instanceof Error ? error.message : "Unknown provider error";
       failures.push(`${config.label}: ${message.slice(0, 220)}`);
+      if (status === 429) providerRateLimited = true;
       // Try another provider only when the failure is plausibly transient.
       // Authentication, permission, invalid-request, and missing-model errors are
       // configuration/actionable failures; retrying every provider only adds latency
       // and can obscure the real issue.
       if (status && !retryable(status)) break;
     }
+  }
+  if (attempted === 0 && minuteBlocked > 0) {
+    throw Object.assign(new Error("Free-provider per-minute request limit reached. The job will retry shortly."), { status: 429, code: "provider_rate_limited" });
+  }
+  if (attempted === 0 && quotaBlocked > 0) {
+    throw Object.assign(new Error("Free-tier daily provider request budget reached. Try again after the daily reset."), { status: 429, code: "free_daily_quota" });
+  }
+  if (providerRateLimited) {
+    throw Object.assign(new Error("Configured free providers are rate-limited or their daily quota is exhausted."), { status: 429, code: "free_daily_quota" });
   }
   throw Object.assign(new Error(`All configured text AI providers failed. ${failures.join(" | ").slice(0, 900)}`), { status: 502, code: "all_providers_failed" });
 }
