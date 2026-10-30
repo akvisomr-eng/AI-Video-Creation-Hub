@@ -103,7 +103,7 @@ async function generateWithProvider(config: ProviderConfig, prompt: string, sign
     "Content-Type": "application/json",
   };
   if (config.id === "openrouter") {
-    headers["HTTP-Referer"] = process.env.APP_PUBLIC_URL || "https://ai-video-creation-hub.example";
+    if (process.env.APP_PUBLIC_URL) headers["HTTP-Referer"] = process.env.APP_PUBLIC_URL;
     headers["X-Title"] = "AI Video Creation Hub";
   }
   const response = await fetch(`${config.endpoint}/chat/completions`, {
