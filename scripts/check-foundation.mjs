@@ -11,6 +11,7 @@ const generationJobsPage = await readFile(new URL("../app/studio/jobs/page.tsx",
 const projectWorkspace = await readFile(new URL("../components/project-workspace.tsx", import.meta.url), "utf8");
 const queueRoute = await readFile(new URL("../app/api/generation-jobs/queue/route.ts", import.meta.url), "utf8");
 const queueConsumer = await readFile(new URL("../app/api/queues/generation-jobs/route.ts", import.meta.url), "utf8");
+const queueClient = await readFile(new URL("../lib/queue.ts", import.meta.url), "utf8");
 const vercelConfig = JSON.parse(await readFile(new URL("../vercel.json", import.meta.url), "utf8"));
 const queueMigration = await readFile(new URL("../database/migrations/20261030_async_generation_queue.sql", import.meta.url), "utf8");
 
@@ -37,6 +38,7 @@ assert.match(generationJobsPage, /Try again/, "Generation history must provide a
 assert.match(queueRoute, /requireSession\(\)/, "Only signed-in users may enqueue generation jobs.");
 assert.match(queueRoute, /WHERE id = \$\{projectId\}::uuid AND user_id = \$\{appUserId\}/, "Queue creation must enforce project ownership.");
 assert.match(queueRoute, /idempotencyKey/, "Queue creation must support idempotent submissions.");
+assert.match(queueClient, /new QueueClient\(\{ region: "iad1" \}\)/, "Queue producer and consumer must use the deployment region.");
 assert.match(queueConsumer, /handleCallback/, "Generation jobs must be processed by the managed Vercel queue consumer.");
 assert.match(queueConsumer, /visibilityTimeoutSeconds: 300/, "Queue consumer must use an explicit visibility lease.");
 assert.ok(queueConsumer.includes("worker_token = ${token}"), "Worker completion must be fenced by its lease token.");
