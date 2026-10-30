@@ -1,4 +1,4 @@
-import { timingSafeEqual } from "node:crypto";
+import { randomUUID, timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { generateCreativeJson } from "@/lib/ai/text-gateway";
@@ -18,8 +18,25 @@ export async function POST(request: Request) {
   if (!process.env.DATABASE_URL) return NextResponse.json({ error: "Worker database is not configured." }, { status: 503 });
 
   const sql = getDb();
-  const token = crypto.randomUUID();
+  const token = randomUUID();
   try {
+    // Recover crashed workers after the lease expires. Retry only within the
+    // configured attempt budget; stale work is never left processing forever.
+    await sql`
+      UPDATE generation_jobs
+      SET status = CASE WHEN attempt_count < max_attempts THEN 'queued' ELSE 'failed' END,
+          next_attempt_at = CASE WHEN attempt_count < max_attempts THEN now() ELSE NULL END,
+          error_code = 'worker_lease_expired',
+          error_message = 'A worker stopped before completing this job.',
+          completed_at = CASE WHEN attempt_count < max_attempts THEN NULL ELSE now() END,
+          locked_at = NULL,
+          worker_token = NULL,
+          updated_at = now()
+      WHERE status = 'processing'
+        AND locked_at < now() - interval '3 minutes'
+        AND parameters->>'purpose' = 'async_text_generation'
+    `;
+
     // One atomic UPDATE claims exactly one eligible job. No long-lived DB transaction
     // is held while the external AI provider runs.
     const claimed = await sql`
