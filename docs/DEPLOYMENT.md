@@ -29,7 +29,6 @@ Use Vercel's encrypted/sensitive type for secrets. Never commit real values to G
 | `GEMINI_API_KEY`, `GROQ_API_KEY`, `CEREBRAS_API_KEY`, `OPENROUTER_API_KEY` | Optional; none verified as operational | Not configured/verified |
 | `AI_MULTI_AGENT_ENABLED` | `false` | Not configured |
 | `GENERATION_QUEUE_ENABLED` | `false` until provider/quota verification | `false` |
-| `GENERATION_WORKER_SECRET` | Not configured | Not configured |
 
 Preview environment variables are scoped to `feat/photo-retouch-studio` and `feat/photo-retouch-studio-rebased`, using only the Neon development branch. Do not copy development credentials into Production.
 
@@ -38,7 +37,7 @@ Preview environment variables are scoped to `feat/photo-retouch-studio` and `fea
 - Apply `database/migrations/20261030_async_generation_queue.sql` to the Neon **development** branch. The migration is additive and re-runnable; do not apply it to Production before a separately reviewed rollout.
 - The signed-in endpoint `POST /api/generation-jobs/queue` accepts `projectId`, `prompt`, and an optional `idempotencyKey`; it enforces project ownership and a limit of 10 queued text jobs per user per day.
 - Set `GENERATION_QUEUE_ENABLED=true` only after a free-tier provider, quota, and billing behavior are verified. It defaults to disabled.
-- A scheduler must call `POST /api/internal/generation-worker` with `Authorization: Bearer <GENERATION_WORKER_SECRET>`. The included GitHub Actions schedule runs every five minutes when repository secrets `GENERATION_WORKER_URL` and `GENERATION_WORKER_SECRET` are present. Set `GENERATION_WORKER_URL` to the Preview worker endpoint. Each call claims at most one job. The worker uses an atomic `FOR UPDATE SKIP LOCKED` claim, three attempts, exponential retry delay, and stale-lease recovery.
+- The application publishes messages to the managed Vercel Queues topic `generation-jobs`; the push consumer is registered in `vercel.json`. Vercel Queues handles durable delivery, visibility leases, and redelivery. The database remains the source of truth for per-user job status and results.
 - Worker output is text/JSON only. This queue does **not** generate images, video, audio, or MP4. Provider cost remains unknown unless the provider supplies verifiable usage pricing; the app does not fabricate a cost.
 - Vercel Queues is currently in public beta and available on all plans. Confirm availability in the target Vercel project before enabling the feature; its service and function usage remain subject to Vercel plan limits.
 
