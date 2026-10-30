@@ -38,11 +38,13 @@ assert.match(generationJobsPage, /Try again/, "Generation history must provide a
 assert.match(queueRoute, /requireSession\(\)/, "Only signed-in users may enqueue generation jobs.");
 assert.match(queueRoute, /WHERE id = \$\{projectId\}::uuid AND user_id = \$\{appUserId\}/, "Queue creation must enforce project ownership.");
 assert.match(queueRoute, /idempotencyKey/, "Queue creation must support idempotent submissions.");
+assert.match(queueRoute, /globalDaily/, "Free-tier provider usage must have a workspace-wide daily cap.");
 assert.match(queueClient, /new QueueClient\(\{ region: "iad1" \}\)/, "Queue producer and consumer must use the deployment region.");
 assert.match(queueConsumer, /handleCallback/, "Generation jobs must be processed by the managed Vercel queue consumer.");
 assert.match(queueConsumer, /visibilityTimeoutSeconds: 300/, "Queue consumer must use an explicit visibility lease.");
 assert.ok(queueConsumer.includes("worker_token = ${token}"), "Worker completion must be fenced by its lease token.");
 assert.match(queueConsumer, /deliveryCount/, "Queue consumer must account for redelivery attempts.");
+assert.match(queueClient, /region: "iad1"/, "Queue client must be pinned to the deployed function region.");
 assert.ok(queueRoute.includes('send("generation-jobs"'), "Queue endpoint must publish to the managed generation topic.");
 assert.equal(vercelConfig.functions["app/api/queues/generation-jobs/route.ts"].experimentalTriggers[0].topic, "generation-jobs", "Vercel must route the generation topic to its consumer.");
 assert.match(queueMigration, /ADD COLUMN IF NOT EXISTS/, "Queue migration must be additive and repeatable.");
