@@ -125,9 +125,11 @@ export async function POST(request: Request) {
       return NextResponse.json({
         error: providerStatus === 503
           ? "No AI provider is currently available. Check server configuration and try again."
-          : "AI storyboard generation failed because the configured providers could not complete the request.",
+          : providerStatus === 429
+            ? "The free-provider daily request budget has been reached. Try again after the daily reset."
+            : "AI storyboard generation failed because the configured providers could not complete the request.",
         jobId,
-      }, { status: providerStatus === 503 ? 503 : 502 });
+      }, { status: providerStatus === 503 ? 503 : providerStatus === 429 ? 429 : 502 });
     }
     const modelText = generated.text;
     await sql`UPDATE generation_jobs SET provider = ${generated.provider}, model = ${generated.model}, updated_at = now() WHERE id = ${jobId}::uuid`;
