@@ -1,4 +1,4 @@
-import { handleCallback } from "@vercel/queue";
+import { handleCallback } from "@/lib/queue";
 import { randomUUID } from "node:crypto";
 import { getDb } from "@/lib/db";
 import { generateCreativeJson } from "@/lib/ai/text-gateway";
