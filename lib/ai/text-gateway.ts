@@ -14,7 +14,9 @@ type ProviderConfig = {
   endpoint: string;
 };
 
-const DEFAULT_ORDER: TextProviderId[] = ["gemini", "groq", "cerebras", "openrouter"];
+const SUPPORTED_ORDER: TextProviderId[] = ["openrouter", "groq", "gemini", "cerebras"];
+// Free-tier-first default: OpenRouter routes to free models. Other providers are opt-in.
+const DEFAULT_ORDER: TextProviderId[] = ["openrouter"];
 
 function configFor(id: TextProviderId): ProviderConfig | null {
   if (id === "gemini") {
@@ -54,10 +56,11 @@ function configFor(id: TextProviderId): ProviderConfig | null {
 }
 
 export function getConfiguredTextProviders(): Array<{ id: TextProviderId; label: string; model: string }> {
-  const configuredOrder = (process.env.AI_TEXT_PROVIDER_ORDER || DEFAULT_ORDER.join(","))
-    .split(",").map((item) => item.trim().toLowerCase()).filter(Boolean) as TextProviderId[];
-  const order = [...new Set(configuredOrder.filter((id) => DEFAULT_ORDER.includes(id)))];
-  for (const id of DEFAULT_ORDER) if (!order.includes(id)) order.push(id);
+  const configured = process.env.AI_TEXT_PROVIDER_ORDER;
+  const requestedOrder = configured === undefined
+    ? DEFAULT_ORDER
+    : configured.split(",").map((item) => item.trim().toLowerCase()) as TextProviderId[];
+  const order = [...new Set(requestedOrder.filter((id) => SUPPORTED_ORDER.includes(id)))];
   return order.flatMap((id) => {
     const config = configFor(id);
     return config ? [{ id: config.id, label: config.label, model: config.model }] : [];
