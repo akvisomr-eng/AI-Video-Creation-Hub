@@ -8,6 +8,9 @@ const sceneRoute = await readFile(new URL("../app/api/projects/[id]/scenes/route
 const readme = await readFile(new URL("../README.md", import.meta.url), "utf8");
 const generationJobsRoute = await readFile(new URL("../app/api/generation-jobs/route.ts", import.meta.url), "utf8");
 const generationJobsPage = await readFile(new URL("../app/studio/jobs/page.tsx", import.meta.url), "utf8");
+const queueRoute = await readFile(new URL("../app/api/generation-jobs/queue/route.ts", import.meta.url), "utf8");
+const workerRoute = await readFile(new URL("../app/api/internal/generation-worker/route.ts", import.meta.url), "utf8");
+const queueMigration = await readFile(new URL("../database/migrations/20261030_async_generation_queue.sql", import.meta.url), "utf8");
 
 assert.equal(packageJson.private, true, "The application should remain private to its owner.");
 assert.ok(packageJson.dependencies.next, "Next.js must be installed.");
@@ -29,4 +32,14 @@ assert.match(generationJobsPage, /\/api\/generation-jobs\?limit=100/, "Generatio
 assert.match(generationJobsPage, /No generation jobs yet/, "Generation history must provide an empty state.");
 assert.match(generationJobsPage, /Try again/, "Generation history must provide an error recovery action.");
 
+assert.match(queueRoute, /requireSession\(\)/, "Only signed-in users may enqueue generation jobs.");
+assert.match(queueRoute, /WHERE id = \$\{projectId\}::uuid AND user_id = \$\{appUserId\}/, "Queue creation must enforce project ownership.");
+assert.match(queueRoute, /idempotencyKey/, "Queue creation must support idempotent submissions.");
+assert.match(workerRoute, /timingSafeEqual/, "Worker secret comparison must be timing-safe.");
+assert.match(workerRoute, /FOR UPDATE SKIP LOCKED/, "Workers must claim jobs without double-processing.");
+assert.match(workerRoute, /worker_token = \$\{token\}/, "Worker completion must be fenced by its lease token.");
+assert.match(workerRoute, /attempt_count < max_attempts/, "Worker must enforce bounded retries.");
+assert.match(workerRoute, /worker_lease_expired/, "Worker must recover expired processing leases.");
+assert.match(queueMigration, /ADD COLUMN IF NOT EXISTS/, "Queue migration must be additive and repeatable.");
+assert.match(jobsNew, /parameters->'result' AS result/, "Owner-scoped job history must return completed JSON output.");
 console.log("Foundation contract checks passed.");
