@@ -19,7 +19,6 @@ export async function GET() {
     videoProvider: process.env.VIDEO_PROVIDER_API_KEY ? "configured" : "not_configured",
     ttsProvider: process.env.TTS_PROVIDER_API_KEY ? "configured" : "not_configured",
     generationQueue: process.env.GENERATION_QUEUE_ENABLED === "true" ? "enabled" : "disabled",
-    generationWorker: process.env.GENERATION_WORKER_SECRET && process.env.GENERATION_WORKER_SECRET.length >= 32 ? "configured" : "not_configured",
     objectStorage: process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY && process.env.AWS_ENDPOINT_URL_S3 && process.env.AWS_REGION ? "configured" : "not_configured",
   };
 
