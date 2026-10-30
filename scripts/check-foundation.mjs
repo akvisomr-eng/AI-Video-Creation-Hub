@@ -16,6 +16,8 @@ const vercelConfig = JSON.parse(await readFile(new URL("../vercel.json", import.
 const queueMigration = await readFile(new URL("../database/migrations/20261030_async_generation_queue.sql", import.meta.url), "utf8");
 const providerTestRoute = await readFile(new URL("../app/api/ai/providers/test/route.ts", import.meta.url), "utf8");
 const providerPage = await readFile(new URL("../app/studio/providers/page.tsx", import.meta.url), "utf8");
+const providerUsage = await readFile(new URL("../lib/ai/provider-usage.ts", import.meta.url), "utf8");
+const textGateway = await readFile(new URL("../lib/ai/text-gateway.ts", import.meta.url), "utf8");
 
 assert.equal(packageJson.private, true, "The application should remain private to its owner.");
 assert.ok(packageJson.dependencies.next, "Next.js must be installed.");
@@ -56,4 +58,7 @@ assert.match(projectWorkspace, /Queue async text draft/, "Async queue action mus
 assert.match(providerTestRoute, /requireSession\(\)/, "Provider health tests must require an authenticated user.");
 assert.match(providerTestRoute, /provider_health_test/, "Provider health tests must be recorded for audit and rate limiting.");
 assert.match(providerPage, /Run text-provider test/, "Provider readiness UI must expose an explicit live test action.");
+assert.match(providerUsage, /FREE_TEXT_PROVIDER_DAILY_LIMIT = 40/, "Text provider usage must enforce the shared free-tier request budget.");
+assert.match(textGateway, /reserveTextProviderRequest\(config.id\)/, "Every provider attempt must reserve from the shared daily budget.");
+assert.match(textGateway, /DEFAULT_ORDER: TextProviderId\[\] = \["openrouter"\]/, "Only the free OpenRouter route is enabled by default.");
 console.log("Foundation contract checks passed.");
