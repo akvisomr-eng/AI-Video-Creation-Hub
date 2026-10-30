@@ -30,4 +30,13 @@ CREATE TABLE IF NOT EXISTS public.ai_provider_daily_usage (
 );
 CREATE INDEX IF NOT EXISTS idx_ai_provider_daily_usage_date
   ON public.ai_provider_daily_usage (usage_date DESC);
+CREATE TABLE IF NOT EXISTS public.ai_provider_minute_usage (
+  window_start timestamptz NOT NULL,
+  provider text NOT NULL,
+  request_count integer NOT NULL DEFAULT 0 CHECK (request_count >= 0),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (window_start, provider)
+);
+CREATE INDEX IF NOT EXISTS idx_ai_provider_minute_usage_window
+  ON public.ai_provider_minute_usage (window_start DESC);
 COMMIT;
