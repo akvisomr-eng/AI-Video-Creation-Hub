@@ -1,4 +1,4 @@
--- Additive queue/worker metadata. Apply to the Neon development branch first.
+-- Additive and re-runnable queue/worker metadata. Apply to Neon development first.
 BEGIN;
 ALTER TABLE public.generation_jobs
   ADD COLUMN IF NOT EXISTS attempt_count integer NOT NULL DEFAULT 0,
@@ -6,9 +6,15 @@ ALTER TABLE public.generation_jobs
   ADD COLUMN IF NOT EXISTS next_attempt_at timestamptz,
   ADD COLUMN IF NOT EXISTS locked_at timestamptz,
   ADD COLUMN IF NOT EXISTS worker_token text;
-ALTER TABLE public.generation_jobs
-  ADD CONSTRAINT generation_jobs_attempt_count_check CHECK (attempt_count >= 0),
-  ADD CONSTRAINT generation_jobs_max_attempts_check CHECK (max_attempts BETWEEN 1 AND 5);
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'generation_jobs_attempt_count_check') THEN
+    ALTER TABLE public.generation_jobs ADD CONSTRAINT generation_jobs_attempt_count_check CHECK (attempt_count >= 0);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'generation_jobs_max_attempts_check') THEN
+    ALTER TABLE public.generation_jobs ADD CONSTRAINT generation_jobs_max_attempts_check CHECK (max_attempts BETWEEN 1 AND 5);
+  END IF;
+END $$;
 CREATE INDEX IF NOT EXISTS idx_generation_jobs_queue
   ON public.generation_jobs (next_attempt_at, created_at)
   WHERE status = 'queued';
